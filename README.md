@@ -2,6 +2,9 @@
 
 Lightweight scroll-spy plugin for tracking section visibility and syncing navigation state. Perfect for collection pages, documentation, and long-form content. **Only 1.5kb gzipped.**
 
+[**Live Demo**](https://magic-spells.github.io/scroll-trigger/demo/)
+
+
 ## Features
 
 - 🪶 **Tiny bundle** - Only 1.5kb gzipped
