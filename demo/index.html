@@ -1,0 +1,580 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>ScrollTrigger Demo</title>
+    <link rel="stylesheet" href="scroll-trigger.min.css" />
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      body {
+        font-family:
+          -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        line-height: 1.6;
+      }
+
+      /* Navigation */
+      .nav {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        background: white;
+        border-bottom: 2px solid #e5e7eb;
+        z-index: 100;
+        padding: 1rem 2rem;
+      }
+
+      .nav-container {
+        max-width: 1200px;
+        margin: 0 auto;
+        display: flex;
+        gap: 1rem;
+        overflow-x: auto;
+        scrollbar-width: none;
+        -webkit-overflow-scrolling: touch;
+      }
+
+      .nav-container::-webkit-scrollbar {
+        display: none;
+      }
+
+      .nav-item {
+        padding: 0.5rem 1.5rem;
+        background: #f3f4f6;
+        border: 2px solid transparent;
+        border-radius: 8px;
+        cursor: pointer;
+        white-space: nowrap;
+        transition: all 0.2s ease;
+        font-weight: 500;
+        text-decoration: none;
+        color: #1f2937;
+      }
+
+      .nav-item:hover {
+        background: #e5e7eb;
+      }
+
+      .nav-item.active {
+        background: #3b82f6;
+        color: white;
+        border-color: #2563eb;
+      }
+
+      /* Main content */
+      .main {
+        margin-top: 80px;
+      }
+
+      /* Sections */
+      .section {
+        min-height: 100vh;
+        padding: 4rem 2rem;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        border-bottom: 2px solid #e5e7eb;
+      }
+
+      .section:nth-child(odd) {
+        background: #f9fafb;
+      }
+
+      .section:nth-child(even) {
+        background: white;
+      }
+
+      .section-content {
+        max-width: 800px;
+        text-align: center;
+      }
+
+      .section h2 {
+        font-size: 3rem;
+        margin-bottom: 1rem;
+        color: #1f2937;
+      }
+
+      .section p {
+        font-size: 1.25rem;
+        color: #6b7280;
+        margin-bottom: 2rem;
+      }
+
+      /* Product Grid */
+      .product-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+        gap: 1rem;
+        width: 100%;
+        max-width: 1200px;
+        margin-top: 2rem;
+      }
+
+      .product-card {
+        background: white;
+        border: 1px solid #e5e7eb;
+        border-radius: 8px;
+        padding: 1.5rem;
+        text-align: center;
+      }
+
+      .product-card h3 {
+        font-size: 1.125rem;
+        margin-bottom: 0.5rem;
+        color: #1f2937;
+      }
+
+      .product-card p {
+        font-size: 0.875rem;
+        color: #6b7280;
+        margin: 0;
+      }
+
+      /* Scroll Animations */
+      [data-animate-fade-up] {
+        opacity: 0;
+        transform: translateY(60px);
+        filter: blur(3px);
+        transition:
+          opacity 0.5s ease-out,
+          transform 0.5s ease-out,
+          filter 0.5s ease-out;
+      }
+
+      [data-animate-fade-up][data-animate-loaded] {
+        opacity: 1;
+        transform: translateY(0);
+        filter: blur(0);
+      }
+
+      /* Debug Panel */
+      .debug-panel {
+        position: fixed;
+        bottom: 2rem;
+        right: 2rem;
+        background: white;
+        border: 2px solid #3b82f6;
+        border-radius: 8px;
+        padding: 1rem;
+        box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+        font-family: "Courier New", monospace;
+        font-size: 0.875rem;
+        z-index: 200;
+      }
+
+      .debug-panel h4 {
+        margin-bottom: 0.5rem;
+        color: #3b82f6;
+      }
+
+      .debug-item {
+        margin: 0.25rem 0;
+        color: #6b7280;
+      }
+
+      .debug-item strong {
+        color: #1f2937;
+      }
+    </style>
+  </head>
+  <body>
+    <!-- Navigation -->
+    <nav class="nav" aria-label="Product categories">
+      <div class="nav-container" id="nav-container">
+        <a href="#cereal" class="nav-item" data-index="0">Cereal</a>
+        <a href="#granola" class="nav-item" data-index="1">Granola</a>
+        <a href="#snacks" class="nav-item" data-index="2">Snacks</a>
+        <a href="#cookies" class="nav-item" data-index="3">Cookies</a>
+        <a href="#crackers" class="nav-item" data-index="4">Crackers</a>
+        <a href="#protein-bars" class="nav-item" data-index="5">Protein Bars</a>
+      </div>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="main">
+      <!-- Section 1: Cereal -->
+      <section
+        id="cereal"
+        class="section"
+        data-section="cereal"
+        aria-labelledby="cereal-heading"
+      >
+        <div class="section-content">
+          <h2 id="cereal-heading" data-section-trigger>🥣 Cereal</h2>
+          <p>Start your day with our delicious breakfast cereals</p>
+        </div>
+        <div class="product-grid" data-animate-fade-up data-animate-offset="15%">
+          <div class="product-card">
+            <h3>Honey Oats</h3>
+            <p>$4.99</p>
+          </div>
+          <div class="product-card">
+            <h3>Cocoa Crunch</h3>
+            <p>$5.49</p>
+          </div>
+          <div class="product-card">
+            <h3>Berry Blast</h3>
+            <p>$5.99</p>
+          </div>
+          <div class="product-card">
+            <h3>Maple Flakes</h3>
+            <p>$4.79</p>
+          </div>
+          <div class="product-card">
+            <h3>Banana Bites</h3>
+            <p>$5.29</p>
+          </div>
+          <div class="product-card">
+            <h3>Apple Rings</h3>
+            <p>$4.99</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- Section 2: Granola -->
+      <section
+        id="granola"
+        class="section"
+        data-section="granola"
+        aria-labelledby="granola-heading"
+      >
+        <div class="section-content">
+          <h2 id="granola-heading" data-section-trigger>🥜 Granola</h2>
+          <p>Crunchy, nutritious granola for any time of day</p>
+        </div>
+        <div class="product-grid" data-animate-fade-up>
+          <div class="product-card">
+            <h3>Almond Crunch</h3>
+            <p>$6.99</p>
+          </div>
+          <div class="product-card">
+            <h3>Pecan Mix</h3>
+            <p>$7.49</p>
+          </div>
+          <div class="product-card">
+            <h3>Honey Clusters</h3>
+            <p>$6.79</p>
+          </div>
+          <div class="product-card">
+            <h3>Dark Chocolate</h3>
+            <p>$7.99</p>
+          </div>
+          <div class="product-card">
+            <h3>Berry Medley</h3>
+            <p>$6.99</p>
+          </div>
+          <div class="product-card">
+            <h3>Coconut Delight</h3>
+            <p>$7.29</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- Section 3: Snacks -->
+      <section
+        id="snacks"
+        class="section"
+        data-section="snacks"
+        aria-labelledby="snacks-heading"
+      >
+        <div class="section-content">
+          <h2 id="snacks-heading" data-section-trigger>🍿 Snacks</h2>
+          <p>Perfect treats for snacking throughout the day</p>
+        </div>
+        <div class="product-grid" data-animate-fade-up>
+          <div class="product-card">
+            <h3>Trail Mix</h3>
+            <p>$5.99</p>
+          </div>
+          <div class="product-card">
+            <h3>Popcorn</h3>
+            <p>$3.99</p>
+          </div>
+          <div class="product-card">
+            <h3>Pretzels</h3>
+            <p>$4.49</p>
+          </div>
+          <div class="product-card">
+            <h3>Rice Cakes</h3>
+            <p>$3.79</p>
+          </div>
+          <div class="product-card">
+            <h3>Veggie Chips</h3>
+            <p>$4.99</p>
+          </div>
+          <div class="product-card">
+            <h3>Fruit Strips</h3>
+            <p>$5.49</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- Section 4: Cookies -->
+      <section
+        id="cookies"
+        class="section"
+        data-section="cookies"
+        aria-labelledby="cookies-heading"
+      >
+        <div class="section-content">
+          <h2 id="cookies-heading" data-section-trigger>🍪 Cookies</h2>
+          <p>Sweet and delicious cookies for every craving</p>
+        </div>
+        <div class="product-grid" data-animate-fade-up data-animate-offset="20%">
+          <div class="product-card">
+            <h3>Chocolate Chip</h3>
+            <p>$4.99</p>
+          </div>
+          <div class="product-card">
+            <h3>Oatmeal Raisin</h3>
+            <p>$4.79</p>
+          </div>
+          <div class="product-card">
+            <h3>Double Chocolate</h3>
+            <p>$5.49</p>
+          </div>
+          <div class="product-card">
+            <h3>Peanut Butter</h3>
+            <p>$4.99</p>
+          </div>
+          <div class="product-card">
+            <h3>Sugar Cookies</h3>
+            <p>$4.49</p>
+          </div>
+          <div class="product-card">
+            <h3>Shortbread</h3>
+            <p>$5.29</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- Section 5: Crackers -->
+      <section
+        id="crackers"
+        class="section"
+        data-section="crackers"
+        aria-labelledby="crackers-heading"
+      >
+        <div class="section-content">
+          <h2 id="crackers-heading" data-section-trigger>🧈 Crackers</h2>
+          <p>Crispy crackers perfect for pairing</p>
+        </div>
+        <div class="product-grid" data-animate-fade-up>
+          <div class="product-card">
+            <h3>Wheat Thins</h3>
+            <p>$3.99</p>
+          </div>
+          <div class="product-card">
+            <h3>Cheese Crackers</h3>
+            <p>$4.29</p>
+          </div>
+          <div class="product-card">
+            <h3>Sesame Rounds</h3>
+            <p>$4.49</p>
+          </div>
+          <div class="product-card">
+            <h3>Multi-grain</h3>
+            <p>$4.79</p>
+          </div>
+          <div class="product-card">
+            <h3>Rice Crackers</h3>
+            <p>$3.99</p>
+          </div>
+          <div class="product-card">
+            <h3>Water Crackers</h3>
+            <p>$3.49</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- Section 6: Protein Bars -->
+      <section
+        id="protein-bars"
+        class="section"
+        data-section="protein-bars"
+        aria-labelledby="protein-bars-heading"
+      >
+        <div class="section-content">
+          <h2 id="protein-bars-heading" data-section-trigger>
+            💪 Protein Bars
+          </h2>
+          <p>Fuel your workout with our protein-packed bars</p>
+        </div>
+        <div class="product-grid" data-animate-fade-up data-animate-offset="50">
+          <div class="product-card">
+            <h3>Chocolate Peanut</h3>
+            <p>$2.99</p>
+          </div>
+          <div class="product-card">
+            <h3>Vanilla Almond</h3>
+            <p>$2.99</p>
+          </div>
+          <div class="product-card">
+            <h3>Berry Blast</h3>
+            <p>$3.29</p>
+          </div>
+          <div class="product-card">
+            <h3>Caramel Crunch</h3>
+            <p>$3.49</p>
+          </div>
+          <div class="product-card">
+            <h3>Cookie Dough</h3>
+            <p>$3.29</p>
+          </div>
+          <div class="product-card">
+            <h3>Mint Chocolate</h3>
+            <p>$2.99</p>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <!-- Debug Panel -->
+    <div class="debug-panel">
+      <h4>ScrollTrigger Debug</h4>
+      <div class="debug-item">
+        Active Index: <strong id="debug-index">-</strong>
+      </div>
+      <div class="debug-item">
+        Section: <strong id="debug-section">-</strong>
+      </div>
+      <div class="debug-item">
+        Scroll Position: <strong id="debug-scroll">0px</strong>
+      </div>
+    </div>
+
+    <script type="module" src="scroll-trigger.esm.js"></script>
+    <script type="module">
+      import ScrollTrigger from "./scroll-trigger.esm.js";
+
+      // Get DOM elements
+      const navContainer = document.getElementById("nav-container");
+      const navItems = Array.from(document.querySelectorAll(".nav-item"));
+      const sections = Array.from(document.querySelectorAll(".section"));
+      const debugIndex = document.getElementById("debug-index");
+      const debugSection = document.getElementById("debug-section");
+      const debugScroll = document.getElementById("debug-scroll");
+
+      // Initialize ScrollTrigger
+      const trigger = new ScrollTrigger({
+        sections: "[data-section-trigger]",
+        offset: "50%",
+        threshold: 0,
+        throttle: 50,
+        behavior: "smooth",
+        onIndexChange: (newIndex, previousIndex, newElement, oldElement) => {
+          console.log(`Section changed from ${previousIndex} to ${newIndex}`);
+          console.log("New element:", newElement);
+          console.log("Previous element:", oldElement);
+
+          // Update navigation
+          updateNavigation(newIndex);
+
+          // Update debug panel
+          updateDebugPanel(newIndex, newElement);
+        },
+      });
+
+      // Debug - log initial state
+      console.log("Sections found:", trigger.getSections().length);
+      console.log("Initial index:", trigger.getCurrentIndex());
+
+      // Set initial state
+      setTimeout(() => {
+        const currentIndex = trigger.getCurrentIndex();
+        if (currentIndex >= 0) {
+          updateNavigation(currentIndex);
+          updateDebugPanel(currentIndex, trigger.getCurrentSection());
+        }
+      }, 100);
+
+      // Update navigation active state and scroll position
+      function updateNavigation(index) {
+        navItems.forEach((item, i) => {
+          if (i === index) {
+            item.classList.add("active");
+            item.setAttribute("aria-current", "location");
+
+            // Scroll nav item into view
+            item.scrollIntoView({
+              behavior: "smooth",
+              block: "nearest",
+              inline: "center",
+            });
+          } else {
+            item.classList.remove("active");
+            item.removeAttribute("aria-current");
+          }
+        });
+      }
+
+      // Update debug panel
+      function updateDebugPanel(index, element) {
+        debugIndex.textContent = index;
+        if (element) {
+          // Get the parent section's data-section attribute
+          const section = element.closest(".section");
+          debugSection.textContent =
+            section?.dataset.section || element.textContent.trim();
+        } else {
+          debugSection.textContent = "none";
+        }
+      }
+
+      // Track scroll position
+      window.addEventListener(
+        "scroll",
+        () => {
+          const scroll = Math.round(
+            window.pageYOffset || document.documentElement.scrollTop,
+          );
+          debugScroll.textContent = `${scroll}px`;
+        },
+        { passive: true },
+      );
+
+      // Handle nav item clicks
+      navItems.forEach((item, index) => {
+        item.addEventListener("click", (e) => {
+          e.preventDefault();
+          trigger.scrollToIndex(index);
+
+          // Update URL without jumping
+          const href = item.getAttribute("href");
+          if (href) {
+            history.pushState(null, "", href);
+          }
+        });
+      });
+
+      // Second ScrollTrigger for scroll animations
+      const scrollAnimation = new ScrollTrigger({
+        sections: "[data-animate-fade-up]",
+        offset: "10%",
+        threshold: 0.1,
+        onIndexChange: (newIndex, previousIndex, newElement, oldElement) => {
+          // Only animate once - check if already loaded
+          if (newElement && !newElement.hasAttribute("data-animate-loaded")) {
+            newElement.setAttribute("data-animate-loaded", "");
+          }
+        },
+      });
+
+      // Global access for debugging
+      window.trigger = trigger;
+      window.scrollAnimation = scrollAnimation;
+
+      console.log("ScrollTrigger initialized!");
+      console.log("Scroll animations initialized!");
+      console.log("Try: trigger.scrollToIndex(3) or trigger.getCurrentIndex()");
+    </script>
+  </body>
+</html>

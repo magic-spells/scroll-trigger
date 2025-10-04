@@ -1,0 +1,72 @@
+{
+  "name": "@magic-spells/scroll-trigger",
+  "version": "0.1.0",
+  "description": "Lightweight scroll-trigger plugin for tracking section visibility and syncing navigation state",
+  "author": "Cory Schulz",
+  "license": "MIT",
+  "type": "module",
+  "main": "dist/scroll-trigger.cjs.js",
+  "module": "dist/scroll-trigger.esm.js",
+  "unpkg": "dist/scroll-trigger.min.js",
+  "style": "dist/scroll-trigger.min.css",
+  "sass": "dist/scroll-trigger.scss",
+  "exports": {
+    ".": {
+      "import": "./dist/scroll-trigger.esm.js",
+      "require": "./dist/scroll-trigger.cjs.js",
+      "default": "./dist/scroll-trigger.esm.js"
+    },
+    "./css": "./dist/scroll-trigger.css",
+    "./css/min": "./dist/scroll-trigger.min.css",
+    "./scss": "./dist/scroll-trigger.scss"
+  },
+  "sideEffects": true,
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/magic-spells/scroll-trigger"
+  },
+  "homepage": "https://github.com/magic-spells/scroll-trigger#readme",
+  "bugs": {
+    "url": "https://github.com/magic-spells/scroll-trigger/issues"
+  },
+  "keywords": [
+    "scroll-trigger",
+    "navigation",
+    "scroll",
+    "intersection-observer",
+    "shopify"
+  ],
+  "files": [
+    "dist/",
+    "src/"
+  ],
+  "scripts": {
+    "build": "rollup -c",
+    "lint": "eslint src/ rollup.config.mjs",
+    "format": "prettier --write .",
+    "prepublishOnly": "npm run build",
+    "serve": "rollup -c --watch",
+    "dev": "rollup -c --watch"
+  },
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org/"
+  },
+  "browserslist": [
+    "last 2 versions",
+    "not dead",
+    "not ie <= 11"
+  ],
+  "devDependencies": {
+    "@eslint/js": "^8.57.0",
+    "@rollup/plugin-node-resolve": "^15.2.3",
+    "@rollup/plugin-terser": "^0.4.4",
+    "eslint": "^8.0.0",
+    "globals": "^13.24.0",
+    "prettier": "^3.3.3",
+    "rollup": "^3.0.0",
+    "rollup-plugin-copy": "^3.5.0",
+    "rollup-plugin-postcss": "^4.0.2",
+    "rollup-plugin-serve": "^1.1.1"
+  }
+}
