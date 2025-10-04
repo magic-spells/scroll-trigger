@@ -61,12 +61,12 @@ The main export is a pure JavaScript class (not a web component) that provides s
 - `#isDestroyed` - Flag to prevent operations after cleanup
 
 **Public Methods:**
-- `getCurrentIndex()` - Returns current active section index
-- `getCurrentSection()` - Returns current active section element
-- `getSections()` - Returns array of all tracked sections
-- `scrollToIndex(index, options)` - Programmatically scroll to a section
-- `scrollToSection(element, options)` - Scroll to a specific element
-- `refresh()` - Recalculate section positions after DOM changes
+- `getCurrentIndex()` - Returns current active element index
+- `getCurrentElement()` - Returns current active element
+- `getElements()` - Returns array of all tracked elements
+- `scrollToIndex(index, options)` - Programmatically scroll to an element
+- `scrollToElement(element, options)` - Scroll to a specific element
+- `refresh()` - Recalculate element positions after DOM changes
 - `updateConfig(newConfig)` - Update configuration dynamically
 - `destroy()` - Cleanup and remove all observers
 
@@ -331,7 +331,7 @@ const scrollAnimation = new ScrollTrigger({
 **Type:** `string`
 **Default:** `'smooth'`
 **Options:** `'smooth' | 'auto'`
-**Description:** Scroll behavior when using `scrollToIndex()` or `scrollToSection()`.
+**Description:** Scroll behavior when using `scrollToIndex()` or `scrollToElement()`.
 - `'smooth'` - Animated scroll
 - `'auto'` - Instant jump
 
@@ -484,13 +484,13 @@ document.getElementById('go-to-top').addEventListener('click', () => {
 });
 
 document.getElementById('go-to-end').addEventListener('click', () => {
-  const lastIndex = trigger.getSections().length - 1;
+  const lastIndex = trigger.getElements().length - 1;
   trigger.scrollToIndex(lastIndex);
 });
 
 // Get current state
 console.log('Current index:', trigger.getCurrentIndex());
-console.log('Current section:', trigger.getCurrentSection());
+console.log('Current element:', trigger.getCurrentElement());
 ```
 
 ### Cleanup
@@ -611,17 +611,17 @@ trigger.getCurrentIndex(): number
 ```
 Returns the index of the currently active section, or -1 if no section is active.
 
-#### getCurrentSection()
+#### getCurrentElement()
 ```javascript
-trigger.getCurrentSection(): Element | null
+trigger.getCurrentElement(): Element | null
 ```
-Returns the DOM element of the currently active section, or null if no section is active.
+Returns the DOM element of the currently active element, or null if no element is active.
 
-#### getSections()
+#### getElements()
 ```javascript
-trigger.getSections(): Element[]
+trigger.getElements(): Element[]
 ```
-Returns a new array containing all tracked section elements. Modifying this array doesn't affect the tracker.
+Returns a new array containing all tracked elements. Modifying this array doesn't affect the tracker.
 
 #### scrollToIndex()
 ```javascript
@@ -647,17 +647,17 @@ trigger.scrollToIndex(2, {
 });
 ```
 
-#### scrollToSection()
+#### scrollToElement()
 ```javascript
-trigger.scrollToSection(element: Element, options?: Object): void
+trigger.scrollToElement(element: Element, options?: Object): void
 ```
 
-Scrolls to a specific section element. Options same as `scrollToIndex()`.
+Scrolls to a specific element. Options same as `scrollToIndex()`.
 
 **Example:**
 ```javascript
-const section = document.querySelector('#my-section');
-trigger.scrollToSection(section, { behavior: 'smooth' });
+const element = document.querySelector('#my-section');
+trigger.scrollToElement(element, { behavior: 'smooth' });
 ```
 
 #### refresh()
@@ -794,7 +794,7 @@ Not included. If targeting older browsers, use IntersectionObserver polyfill.
 **Problem:** Sections aren't becoming active when scrolling.
 
 **Solutions:**
-1. Check sections exist: `trigger.getSections()` should return elements
+1. Check elements exist: `trigger.getElements()` should return elements
 2. Verify offset isn't too high: Try `offset: 0` to test
 3. Check threshold: Use `threshold: 0` for maximum sensitivity
 4. Inspect console for warnings
@@ -846,7 +846,7 @@ When modifying the plugin, test:
 - [ ] Callback fires with correct indices
 - [ ] Custom events emit correctly
 - [ ] `scrollToIndex()` works
-- [ ] `scrollToSection()` works
+- [ ] `scrollToElement()` works
 - [ ] `refresh()` recalculates correctly
 - [ ] `updateConfig()` updates observers
 - [ ] `destroy()` cleans up everything

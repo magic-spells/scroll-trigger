@@ -484,7 +484,7 @@
       });
 
       // Debug - log initial state
-      console.log("Sections found:", trigger.getSections().length);
+      console.log("Elements found:", trigger.getElements().length);
       console.log("Initial index:", trigger.getCurrentIndex());
 
       // Set initial state
@@ -492,7 +492,7 @@
         const currentIndex = trigger.getCurrentIndex();
         if (currentIndex >= 0) {
           updateNavigation(currentIndex);
-          updateDebugPanel(currentIndex, trigger.getCurrentSection());
+          updateDebugPanel(currentIndex, trigger.getCurrentElement());
         }
       }, 100);
 

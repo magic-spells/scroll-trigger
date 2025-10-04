@@ -96,18 +96,18 @@ Returns the current active section index (-1 if none).
 const currentIndex = trigger.getCurrentIndex();
 ```
 
-### `getCurrentSection()`
-Returns the current active section element (null if none).
+### `getCurrentElement()`
+Returns the current active element (null if none).
 
 ```javascript
-const section = trigger.getCurrentSection();
+const element = trigger.getCurrentElement();
 ```
 
-### `getSections()`
-Returns array of all tracked section elements.
+### `getElements()`
+Returns array of all tracked elements.
 
 ```javascript
-const sections = trigger.getSections();
+const elements = trigger.getElements();
 ```
 
 ### `scrollToIndex(index, options)`
@@ -120,12 +120,12 @@ trigger.scrollToIndex(2, {
 });
 ```
 
-### `scrollToSection(element, options)`
-Scroll to a specific section element.
+### `scrollToElement(element, options)`
+Scroll to a specific element.
 
 ```javascript
-const section = document.querySelector('.my-section');
-trigger.scrollToSection(section);
+const element = document.querySelector('.my-section');
+trigger.scrollToElement(element);
 ```
 
 ### `refresh()`

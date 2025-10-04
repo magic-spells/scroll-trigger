@@ -54,6 +54,7 @@ export default [
       format: 'umd',
       name: 'ScrollTrigger',
       sourcemap: true,
+      exports: 'default',
     },
     plugins: [resolve(), cssPlugin],
   },
@@ -65,6 +66,7 @@ export default [
       format: 'umd',
       name: 'ScrollTrigger',
       sourcemap: false,
+      exports: 'default',
     },
     plugins: [
       resolve(),

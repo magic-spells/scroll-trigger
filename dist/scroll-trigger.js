@@ -1,8 +1,8 @@
 (function (global, factory) {
-  typeof exports === 'object' && typeof module !== 'undefined' ? factory(exports) :
-  typeof define === 'function' && define.amd ? define(['exports'], factory) :
-  (global = typeof globalThis !== 'undefined' ? globalThis : global || self, factory(global.ScrollTrigger = {}));
-})(this, (function (exports) { 'use strict';
+  typeof exports === 'object' && typeof module !== 'undefined' ? module.exports = factory() :
+  typeof define === 'function' && define.amd ? define(factory) :
+  (global = typeof globalThis !== 'undefined' ? globalThis : global || self, global.ScrollTrigger = factory());
+})(this, (function () { 'use strict';
 
   /**
    * ScrollTrigger - Scroll spy plugin for tracking section visibility
@@ -21,20 +21,21 @@
    */
   class ScrollTrigger {
     // Private fields
-    #sections = [];
+    #elements = [];
     #currentIndex = -1;
     #observer = null;
     #config = {
       offset: 100,
       threshold: 0.1,
-      throttle: 100,
-      behavior: 'smooth',
+      throttle: 50,
+      behavior: "smooth",
       onIndexChange: null,
     };
     #intersectingMap = new Map();
     #throttleTimer = null;
     #isDestroyed = false;
     #resizeObserver = null;
+    #scrollHandler = null;
 
     /**
      * Create a new ScrollTrigger instance
@@ -50,11 +51,11 @@
       // Merge config
       this.#config = { ...this.#config, ...options };
 
-      // Get sections
-      this.#sections = this.#getSections(this.#config.sections);
+      // Get elements
+      this.#elements = this.#getElements(this.#config.sections);
 
-      if (this.#sections.length === 0) {
-        console.warn('ScrollTrigger: No sections found');
+      if (this.#elements.length === 0) {
+        console.warn("ScrollTrigger: No elements found");
         return;
       }
 
@@ -65,13 +66,16 @@
       if (this.#hasPercentageOffsets()) {
         this.#setupResizeObserver();
       }
+
+      // Add scroll listener as fallback for mobile
+      this.#setupScrollListener();
     }
 
     /**
-     * Get sections from various input types
+     * Get elements from various input types
      */
-    #getSections(input) {
-      if (typeof input === 'string') {
+    #getElements(input) {
+      if (typeof input === "string") {
         return Array.from(document.querySelectorAll(input));
       } else if (input instanceof NodeList) {
         return Array.from(input);
@@ -85,7 +89,7 @@
      * Check if offset is a percentage value
      */
     #isPercentageOffset(offset) {
-      return typeof offset === 'string' && offset.includes('%');
+      return typeof offset === "string" && offset.includes("%");
     }
 
     /**
@@ -97,7 +101,7 @@
         const percentage = parseFloat(offset) / 100;
         return Math.round(window.innerHeight * percentage);
       }
-      return typeof offset === 'number' ? offset : 100;
+      return typeof offset === "number" ? offset : 100;
     }
 
     /**
@@ -107,10 +111,12 @@
     #getElementOffset(element) {
       if (!element) return this.#config.offset;
 
-      const customOffset = element.getAttribute('data-animate-offset');
+      const customOffset = element.getAttribute("data-animate-offset");
       if (customOffset !== null) {
         // Parse as number if it's just digits, otherwise return as string (for percentages)
-        return /^\d+$/.test(customOffset) ? parseInt(customOffset, 10) : customOffset;
+        return /^\d+$/.test(customOffset)
+          ? parseInt(customOffset, 10)
+          : customOffset;
       }
 
       return this.#config.offset;
@@ -126,8 +132,8 @@
       }
 
       // Check if any element has a custom percentage offset
-      return this.#sections.some((section) => {
-        const customOffset = section.getAttribute('data-animate-offset');
+      return this.#elements.some((element) => {
+        const customOffset = element.getAttribute("data-animate-offset");
         return customOffset && this.#isPercentageOffset(customOffset);
       });
     }
@@ -148,6 +154,18 @@
     }
 
     /**
+     * Setup scroll listener as fallback for mobile browsers
+     * IntersectionObserver can miss events during momentum scrolling
+     */
+    #setupScrollListener() {
+      this.#scrollHandler = () => {
+        this.#throttleIndexUpdate();
+      };
+
+      window.addEventListener("scroll", this.#scrollHandler, { passive: true });
+    }
+
+    /**
      * Setup IntersectionObserver to track sections
      */
     #setupObserver() {
@@ -164,13 +182,13 @@
           root: null,
           rootMargin: rootMargin,
           threshold: this.#config.threshold,
-        }
+        },
       );
 
-      // Observe all sections
-      this.#sections.forEach((section) => {
-        this.#observer.observe(section);
-        this.#intersectingMap.set(section, false);
+      // Observe all elements
+      this.#elements.forEach((element) => {
+        this.#observer.observe(element);
+        this.#intersectingMap.set(element, false);
       });
     }
 
@@ -202,26 +220,26 @@
     }
 
     /**
-     * Update the active index based on intersecting sections
+     * Update the active index based on intersecting elements
      * Supports per-element custom offsets via data-animate-offset attribute
      */
     #updateActiveIndex() {
       if (this.#isDestroyed) return;
 
-      // Check each section against its custom offset
+      // Check each element against its custom offset
       let newIndex = -1;
 
-      // Find the closest section that has crossed its trigger line
+      // Find the closest element that has crossed its trigger line
       // Check from bottom to top to find the last one that crossed
-      for (let i = this.#sections.length - 1; i >= 0; i--) {
-        const section = this.#sections[i];
-        const elementOffset = this.#getElementOffset(section);
+      for (let i = this.#elements.length - 1; i >= 0; i--) {
+        const element = this.#elements[i];
+        const elementOffset = this.#getElementOffset(element);
         const offsetPx = this.#calculateOffset(elementOffset);
         const triggerLine = window.innerHeight - offsetPx;
 
-        const rect = section.getBoundingClientRect();
+        const rect = element.getBoundingClientRect();
 
-        // If this section's top is at or above its trigger line, it's active
+        // If this element's top is at or above its trigger line, it's active
         if (rect.top <= triggerLine) {
           newIndex = i;
           break;
@@ -233,10 +251,13 @@
         const previousIndex = this.#currentIndex;
         this.#currentIndex = newIndex;
 
-        const currentElement = this.#sections[newIndex] || null;
-        const previousElement = this.#sections[previousIndex] || null;
+        const currentElement = this.#elements[newIndex] || null;
+        const previousElement = this.#elements[previousIndex] || null;
 
-        if (this.#config.onIndexChange && typeof this.#config.onIndexChange === 'function') {
+        if (
+          this.#config.onIndexChange &&
+          typeof this.#config.onIndexChange === "function"
+        ) {
           this.#config.onIndexChange({
             currentIndex: newIndex,
             previousIndex,
@@ -246,7 +267,7 @@
         }
 
         // Emit custom event
-        this.#emitEvent('scroll-trigger:change', {
+        this.#emitEvent("scroll-trigger:change", {
           index: newIndex,
           previousIndex,
           section: currentElement,
@@ -259,65 +280,66 @@
      * Emit custom event
      */
     #emitEvent(eventName, detail) {
-      if (typeof window !== 'undefined') {
+      if (typeof window !== "undefined") {
         window.dispatchEvent(
           new CustomEvent(eventName, {
             bubbles: true,
             detail: detail,
-          })
+          }),
         );
       }
     }
 
     /**
      * Get the current active index
-     * @returns {number} Current active section index (-1 if none)
+     * @returns {number} Current active element index (-1 if none)
      */
     getCurrentIndex() {
       return this.#currentIndex;
     }
 
     /**
-     * Get the current active section element
-     * @returns {Element|null} Current active section element or null
+     * Get the current active element
+     * @returns {Element|null} Current active element or null
      */
-    getCurrentSection() {
-      return this.#sections[this.#currentIndex] || null;
+    getCurrentElement() {
+      return this.#elements[this.#currentIndex] || null;
     }
 
     /**
-     * Get all tracked sections
-     * @returns {Array<Element>} Array of section elements
+     * Get all tracked elements
+     * @returns {Array<Element>} Array of tracked elements
      */
-    getSections() {
-      return [...this.#sections];
+    getElements() {
+      return [...this.#elements];
     }
 
     /**
-     * Scroll to a specific section by index
-     * @param {number} index - Index of section to scroll to
+     * Scroll to a specific element by index
+     * @param {number} index - Index of element to scroll to
      * @param {Object} [options] - Scroll options
      * @param {string} [options.behavior] - Scroll behavior ('smooth' or 'auto')
-     * @param {number} [options.offset] - Additional offset in pixels (positive = section appears higher, negative = section appears lower)
+     * @param {number} [options.offset] - Additional offset in pixels (positive = element appears higher, negative = element appears lower)
      */
     scrollToIndex(index, options = {}) {
-      if (index < 0 || index >= this.#sections.length) {
+      if (index < 0 || index >= this.#elements.length) {
         console.warn(`ScrollTrigger: Invalid index ${index}`);
         return;
       }
 
-      const section = this.#sections[index];
+      const element = this.#elements[index];
       const behavior = options.behavior || this.#config.behavior;
       const additionalOffset = options.offset || 0;
 
       // Calculate offset from bottom in pixels (respects element's custom offset)
-      const elementOffset = this.#getElementOffset(section);
+      const elementOffset = this.#getElementOffset(element);
       const offsetPx = this.#calculateOffset(elementOffset);
       const triggerLine = window.innerHeight - offsetPx;
 
-      const rect = section.getBoundingClientRect();
+      const rect = element.getBoundingClientRect();
       const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
-      const targetPosition = rect.top + scrollTop - triggerLine - additionalOffset;
+      const targetPosition =
+        rect.top + scrollTop - triggerLine - additionalOffset;
 
       window.scrollTo({
         top: targetPosition,
@@ -326,29 +348,29 @@
     }
 
     /**
-     * Scroll to a specific section element
-     * @param {Element} section - Section element to scroll to
+     * Scroll to a specific element
+     * @param {Element} element - Element to scroll to
      * @param {Object} [options] - Scroll options (see scrollToIndex)
      */
-    scrollToSection(section, options = {}) {
-      const index = this.#sections.indexOf(section);
+    scrollToElement(element, options = {}) {
+      const index = this.#elements.indexOf(element);
       if (index === -1) {
-        console.warn('ScrollTrigger: Section not found in tracked sections');
+        console.warn("ScrollTrigger: Element not found in tracked elements");
         return;
       }
       this.scrollToIndex(index, options);
     }
 
     /**
-     * Recalculate section positions (call if DOM changes)
+     * Recalculate element positions (call if DOM changes)
      */
     refresh() {
       if (this.#isDestroyed) return;
 
-      // Re-observe sections to update positions
-      this.#sections.forEach((section) => {
-        this.#observer.unobserve(section);
-        this.#observer.observe(section);
+      // Re-observe elements to update positions
+      this.#elements.forEach((element) => {
+        this.#observer.unobserve(element);
+        this.#observer.observe(element);
       });
 
       // Force index update
@@ -363,13 +385,14 @@
       if (this.#isDestroyed) return;
 
       const needsObserverUpdate =
-        ('offset' in newConfig && newConfig.offset !== this.#config.offset) ||
-        ('threshold' in newConfig && newConfig.threshold !== this.#config.threshold);
+        ("offset" in newConfig && newConfig.offset !== this.#config.offset) ||
+        ("threshold" in newConfig &&
+          newConfig.threshold !== this.#config.threshold);
 
       this.#config = { ...this.#config, ...newConfig };
 
       // Handle resize observer for percentage changes
-      if ('offset' in newConfig) {
+      if ("offset" in newConfig) {
         const hasPercentages = this.#hasPercentageOffsets();
 
         if (hasPercentages && !this.#resizeObserver) {
@@ -414,17 +437,20 @@
         this.#resizeObserver = null;
       }
 
+      // Remove scroll listener
+      if (this.#scrollHandler) {
+        window.removeEventListener("scroll", this.#scrollHandler);
+        this.#scrollHandler = null;
+      }
+
       // Clear maps and arrays
       this.#intersectingMap.clear();
-      this.#sections = [];
+      this.#elements = [];
       this.#currentIndex = -1;
     }
   }
 
-  exports.ScrollTrigger = ScrollTrigger;
-  exports.default = ScrollTrigger;
-
-  Object.defineProperty(exports, '__esModule', { value: true });
+  return ScrollTrigger;
 
 }));
 //# sourceMappingURL=scroll-trigger.js.map
