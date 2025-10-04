@@ -38,10 +38,10 @@ import ScrollTrigger from '@magic-spells/scroll-trigger';
 const trigger = new ScrollTrigger({
   sections: '.collection-section',
   offset: 100,
-  onIndexChange: (newIndex, previousIndex, newElement, oldElement) => {
+  onIndexChange: ({ currentIndex, currentElement }) => {
     // Update your navigation
-    console.log('Active section:', newIndex);
-    console.log('Trigger element:', newElement);
+    console.log('Active section:', currentIndex);
+    console.log('Trigger element:', currentElement);
   }
 });
 ```
@@ -55,7 +55,7 @@ const trigger = new ScrollTrigger({
 | `threshold` | `number` | `0.1` | IntersectionObserver threshold (0-1) |
 | `throttle` | `number` | `100` | Throttle delay for updates (ms) |
 | `behavior` | `string` | `'smooth'` | Scroll behavior ('smooth' or 'auto') |
-| `onIndexChange` | `function` | `null` | Callback when active section changes (receives: newIndex, previousIndex, newElement, oldElement) |
+| `onIndexChange` | `function` | `null` | Callback when active section changes (receives object: `{ currentIndex, previousIndex, currentElement, previousElement }`) |
 
 ## Per-Element Custom Offsets
 
@@ -73,9 +73,9 @@ Each tracked element can override the global `offset` configuration using the `d
 const scrollAnimation = new ScrollTrigger({
   sections: '[data-animate-fade-up]',
   offset: '10%', // Default offset for all elements
-  onIndexChange: (newIndex, previousIndex, newElement, oldElement) => {
-    if (newElement && !newElement.hasAttribute('data-animate-loaded')) {
-      newElement.setAttribute('data-animate-loaded', '');
+  onIndexChange: ({ currentElement }) => {
+    if (currentElement && !currentElement.hasAttribute('data-animate-loaded')) {
+      currentElement.setAttribute('data-animate-loaded', '');
     }
   }
 });
@@ -160,8 +160,8 @@ The tracker emits a custom event on the window:
 window.addEventListener('scroll-trigger:change', (e) => {
   console.log('New index:', e.detail.index);
   console.log('Previous index:', e.detail.previousIndex);
-  console.log('Section element:', e.detail.section);
-  console.log('Previous section element:', e.detail.previousSection);
+  console.log('Current element:', e.detail.section);
+  console.log('Previous element:', e.detail.previousSection);
 });
 ```
 
@@ -201,15 +201,15 @@ window.addEventListener('scroll-trigger:change', (e) => {
     const trigger = new ScrollTrigger({
       sections: '.section',
       offset: 100,
-      onIndexChange: (newIndex, previousIndex, newElement, oldElement) => {
+      onIndexChange: ({ currentIndex }) => {
         // Update nav
         navItems.forEach((item, i) => {
-          item.classList.toggle('active', i === newIndex);
+          item.classList.toggle('active', i === currentIndex);
         });
 
         // Scroll nav item into view
-        if (newIndex >= 0) {
-          navItems[newIndex].scrollIntoView({
+        if (currentIndex >= 0) {
+          navItems[currentIndex].scrollIntoView({
             behavior: 'smooth',
             block: 'nearest',
             inline: 'center'
@@ -290,10 +290,10 @@ You can use multiple ScrollTrigger instances to create different effects. Here's
       sections: '[data-animate-fade-up]',
       offset: '10%', // Trigger when 10% from bottom of viewport
       threshold: 0.1,
-      onIndexChange: (newIndex, previousIndex, newElement, oldElement) => {
+      onIndexChange: ({ currentElement }) => {
         // Only animate once - check if already loaded
-        if (newElement && !newElement.hasAttribute('data-animate-loaded')) {
-          newElement.setAttribute('data-animate-loaded', '');
+        if (currentElement && !currentElement.hasAttribute('data-animate-loaded')) {
+          currentElement.setAttribute('data-animate-loaded', '');
         }
       }
     });
@@ -344,9 +344,9 @@ const navItems = document.querySelectorAll('.nav-item');
 const trigger = new ScrollTrigger({
   sections: '[data-section-trigger]',
   offset: '50%',
-  onIndexChange: (newIndex, previousIndex, newElement, oldElement) => {
+  onIndexChange: ({ currentIndex }) => {
     navItems.forEach((item, i) => {
-      if (i === newIndex) {
+      if (i === currentIndex) {
         item.classList.add('active');
         // Use aria-current to indicate current location
         item.setAttribute('aria-current', 'location');

@@ -12,8 +12,8 @@ Object.defineProperty(exports, '__esModule', { value: true });
  * const trigger = new ScrollTrigger({
  *   sections: '.collection-section',
  *   offset: 100, // 100px from bottom of viewport
- *   onIndexChange: (newIndex, oldIndex, newElement, oldElement) => {
- *     console.log('Active section:', newIndex);
+ *   onIndexChange: ({ currentIndex, currentElement }) => {
+ *     console.log('Active section:', currentIndex);
  *   }
  * });
  */
@@ -42,7 +42,7 @@ class ScrollTrigger {
    * @param {number} [options.threshold=0.1] - IntersectionObserver threshold (0-1)
    * @param {number} [options.throttle=100] - Throttle delay for scroll events (ms)
    * @param {string} [options.behavior='smooth'] - Scroll behavior ('smooth' or 'auto')
-   * @param {Function} [options.onIndexChange] - Callback when active section changes (receives newIndex, oldIndex, newElement, oldElement)
+   * @param {Function} [options.onIndexChange] - Callback when active section changes (receives object: { currentIndex, previousIndex, currentElement, previousElement })
    */
   constructor(options = {}) {
     // Merge config
@@ -228,22 +228,27 @@ class ScrollTrigger {
 
     // Fire callback if index changed
     if (newIndex !== this.#currentIndex) {
-      const oldIndex = this.#currentIndex;
+      const previousIndex = this.#currentIndex;
       this.#currentIndex = newIndex;
 
-      const newElement = this.#sections[newIndex] || null;
-      const oldElement = this.#sections[oldIndex] || null;
+      const currentElement = this.#sections[newIndex] || null;
+      const previousElement = this.#sections[previousIndex] || null;
 
       if (this.#config.onIndexChange && typeof this.#config.onIndexChange === 'function') {
-        this.#config.onIndexChange(newIndex, oldIndex, newElement, oldElement);
+        this.#config.onIndexChange({
+          currentIndex: newIndex,
+          previousIndex,
+          currentElement,
+          previousElement,
+        });
       }
 
       // Emit custom event
       this.#emitEvent('scroll-trigger:change', {
         index: newIndex,
-        previousIndex: oldIndex,
-        section: newElement,
-        previousSection: oldElement,
+        previousIndex,
+        section: currentElement,
+        previousSection: previousElement,
       });
     }
   }

@@ -134,8 +134,8 @@ The plugin provides two ways to respond to section changes:
 ```javascript
 new ScrollTrigger({
   sections: '.section',
-  onIndexChange: (newIndex, previousIndex) => {
-    console.log(`Changed from ${previousIndex} to ${newIndex}`);
+  onIndexChange: ({ currentIndex, previousIndex }) => {
+    console.log(`Changed from ${previousIndex} to ${currentIndex}`);
   }
 });
 ```
@@ -191,12 +191,12 @@ const trigger = new ScrollTrigger({
   threshold: 0,
   throttle: 50,
   behavior: 'smooth',
-  onIndexChange: (index, previousIndex) => {
+  onIndexChange: ({ currentIndex }) => {
     // Update navigation active state
-    updateNavigation(index);
+    updateNavigation(currentIndex);
 
     // Update debug panel
-    updateDebugPanel(index);
+    updateDebugPanel(currentIndex);
   }
 });
 
@@ -283,9 +283,9 @@ Each tracked element can override the global `offset` using the `data-animate-of
 const scrollAnimation = new ScrollTrigger({
   sections: '[data-animate-fade-up]',
   offset: '10%', // Default for elements without data-animate-offset
-  onIndexChange: (newIndex, previousIndex, newElement, oldElement) => {
-    if (newElement && !newElement.hasAttribute('data-animate-loaded')) {
-      newElement.setAttribute('data-animate-loaded', '');
+  onIndexChange: ({ currentElement }) => {
+    if (currentElement && !currentElement.hasAttribute('data-animate-loaded')) {
+      currentElement.setAttribute('data-animate-loaded', '');
     }
   }
 });
@@ -340,29 +340,29 @@ const scrollAnimation = new ScrollTrigger({
 ### onIndexChange
 **Type:** `Function | null`
 **Default:** `null`
-**Signature:** `(newIndex: number, previousIndex: number, newElement: Element|null, oldElement: Element|null) => void`
+**Signature:** `({ currentIndex, previousIndex, currentElement, previousElement }) => void`
 **Description:** Callback fired when active section changes.
 
-**Parameters:**
-- `newIndex` - Index of newly active section (-1 if none)
-- `previousIndex` - Index of previously active section (-1 if none)
-- `newElement` - DOM element of newly active section (null if none)
-- `oldElement` - DOM element of previously active section (null if none)
+**Parameters (destructured object):**
+- `currentIndex` - Index of currently active element (-1 if none)
+- `previousIndex` - Index of previously active element (-1 if none)
+- `currentElement` - DOM element of currently active element (null if none)
+- `previousElement` - DOM element of previously active element (null if none)
 
 **Example:**
 ```javascript
 new ScrollTrigger({
   sections: '.section',
-  onIndexChange: (index, prevIndex) => {
+  onIndexChange: ({ currentIndex }) => {
     // Remove active class from all nav items
     navItems.forEach(item => item.classList.remove('active'));
 
     // Add active class to current nav item
-    if (index >= 0) {
-      navItems[index].classList.add('active');
+    if (currentIndex >= 0) {
+      navItems[currentIndex].classList.add('active');
 
       // Scroll nav item into view
-      navItems[index].scrollIntoView({
+      navItems[currentIndex].scrollIntoView({
         behavior: 'smooth',
         block: 'nearest',
         inline: 'center'
@@ -383,8 +383,9 @@ import '@magic-spells/scroll-trigger/css/min';
 const trigger = new ScrollTrigger({
   sections: '.section',
   offset: 100,
-  onIndexChange: (newIndex, previousIndex, newElement, oldElement) => {
-    console.log('Active section:', newIndex);
+  onIndexChange: ({ currentIndex, currentElement }) => {
+    console.log('Active section:', currentIndex);
+    console.log('Active element:', currentElement);
   }
 });
 ```
@@ -398,10 +399,10 @@ const sections = document.querySelectorAll('.section');
 const trigger = new ScrollTrigger({
   sections: sections,
   offset: '20%',  // Trigger at 20% from bottom
-  onIndexChange: (newIndex, previousIndex, newElement, oldElement) => {
+  onIndexChange: ({ currentIndex }) => {
     // Update nav active state
     navItems.forEach((item, i) => {
-      item.classList.toggle('active', i === newIndex);
+      item.classList.toggle('active', i === currentIndex);
     });
   }
 });
@@ -462,8 +463,8 @@ const trigger = new ScrollTrigger({
 window.addEventListener('scroll-trigger:change', (e) => {
   console.log('New index:', e.detail.index);
   console.log('Previous index:', e.detail.previousIndex);
-  console.log('Section element:', e.detail.section);
-  console.log('Previous section element:', e.detail.previousSection);
+  console.log('Current element:', e.detail.section);
+  console.log('Previous element:', e.detail.previousSection);
 
   // Update UI
   updateNavigation(e.detail.index);
@@ -519,17 +520,17 @@ const trigger = new ScrollTrigger({
   sections: '[data-category-section]',
   offset: '15%',  // Trigger when section is 15% from bottom
   throttle: 50,
-  onIndexChange: (newIndex, previousIndex, newElement, oldElement) => {
+  onIndexChange: ({ currentIndex }) => {
     const categories = document.querySelectorAll('[data-category-nav]');
     const container = document.querySelector('.category-nav-container');
 
     categories.forEach((cat, i) => {
-      cat.classList.toggle('active', i === newIndex);
+      cat.classList.toggle('active', i === currentIndex);
     });
 
     // Scroll horizontal nav to keep active item visible
-    if (newIndex >= 0) {
-      categories[newIndex].scrollIntoView({
+    if (currentIndex >= 0) {
+      categories[currentIndex].scrollIntoView({
         behavior: 'smooth',
         block: 'nearest',
         inline: 'center'
@@ -547,10 +548,10 @@ For documentation sites with auto-highlighting TOC:
 const trigger = new ScrollTrigger({
   sections: 'h2[id], h3[id]',  // Track headings with IDs
   offset: 80,  // Account for fixed header
-  onIndexChange: (newIndex, previousIndex, newElement, oldElement) => {
+  onIndexChange: ({ currentIndex }) => {
     // Update TOC
     document.querySelectorAll('.toc-link').forEach((link, i) => {
-      link.classList.toggle('active', i === newIndex);
+      link.classList.toggle('active', i === currentIndex);
     });
   }
 });
@@ -574,15 +575,15 @@ Track form sections and update progress indicator:
 const trigger = new ScrollTrigger({
   sections: '.form-step',
   offset: '30%',
-  onIndexChange: (newIndex, previousIndex, newElement, oldElement) => {
+  onIndexChange: ({ currentIndex }) => {
     // Update progress bar
-    const progress = ((newIndex + 1) / sections.length) * 100;
+    const progress = ((currentIndex + 1) / sections.length) * 100;
     document.querySelector('.progress-bar').style.width = `${progress}%`;
 
     // Update step indicator
     document.querySelectorAll('.step-indicator').forEach((step, i) => {
-      step.classList.toggle('active', i === newIndex);
-      step.classList.toggle('completed', i < newIndex);
+      step.classList.toggle('active', i === currentIndex);
+      step.classList.toggle('completed', i < currentIndex);
     });
   }
 });
@@ -686,7 +687,7 @@ trigger.updateConfig({ throttle: 200 });
 
 // Change callback
 trigger.updateConfig({
-  onIndexChange: (newIndex, previousIndex, newElement, oldElement) => {
+  onIndexChange: ({ currentIndex, currentElement }) => {
     // New callback
   }
 });

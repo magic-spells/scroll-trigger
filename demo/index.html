@@ -470,16 +470,16 @@
         threshold: 0,
         throttle: 50,
         behavior: "smooth",
-        onIndexChange: (newIndex, previousIndex, newElement, oldElement) => {
-          console.log(`Section changed from ${previousIndex} to ${newIndex}`);
-          console.log("New element:", newElement);
-          console.log("Previous element:", oldElement);
+        onIndexChange: ({ currentIndex, previousIndex, currentElement, previousElement }) => {
+          console.log(`Section changed from ${previousIndex} to ${currentIndex}`);
+          console.log("Current element:", currentElement);
+          console.log("Previous element:", previousElement);
 
           // Update navigation
-          updateNavigation(newIndex);
+          updateNavigation(currentIndex);
 
           // Update debug panel
-          updateDebugPanel(newIndex, newElement);
+          updateDebugPanel(currentIndex, currentElement);
         },
       });
 
@@ -560,10 +560,10 @@
         sections: "[data-animate-fade-up]",
         offset: "10%",
         threshold: 0.1,
-        onIndexChange: (newIndex, previousIndex, newElement, oldElement) => {
+        onIndexChange: ({ currentElement }) => {
           // Only animate once - check if already loaded
-          if (newElement && !newElement.hasAttribute("data-animate-loaded")) {
-            newElement.setAttribute("data-animate-loaded", "");
+          if (currentElement && !currentElement.hasAttribute("data-animate-loaded")) {
+            currentElement.setAttribute("data-animate-loaded", "");
           }
         },
       });
