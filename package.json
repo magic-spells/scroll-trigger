@@ -1,6 +1,6 @@
 {
   "name": "@magic-spells/scroll-trigger",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "Lightweight scroll-trigger plugin for tracking section visibility and syncing navigation state",
   "author": "Cory Schulz",
   "license": "MIT",

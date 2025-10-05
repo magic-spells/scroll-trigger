@@ -444,5 +444,5 @@ class ScrollTrigger {
   }
 }
 
-export { ScrollTrigger, ScrollTrigger as default };
+export { ScrollTrigger as default };
 //# sourceMappingURL=scroll-trigger.esm.js.map
