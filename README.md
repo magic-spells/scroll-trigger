@@ -1,19 +1,20 @@
 # ScrollTrigger
 
-Lightweight scroll-spy plugin for tracking section visibility and syncing navigation state. Perfect for collection pages, documentation, and long-form content. **Only 1.5kb gzipped.**
+Lightweight scroll-spy plugin for tracking section visibility and syncing navigation state. Perfect for collection pages, documentation, and long-form content. **Only 2.6kb gzipped.**
 
 [**Live Demo**](https://magic-spells.github.io/scroll-trigger/demo/)
 
 
 ## Features
 
-- 🪶 **Tiny bundle** - Only 1.5kb gzipped
+- 🪶 **Tiny bundle** - Only 2.6kb gzipped
 - 🎯 **IntersectionObserver-based** - Modern, performant section tracking
 - 🔄 **Callback system** - Easy integration with custom navigation
 - ⚡ **Throttled updates** - Optimized performance with configurable throttling
 - 📍 **Precise control** - Customizable trigger offset from viewport bottom
 - 🎨 **Zero dependencies** - Pure vanilla JavaScript
 - 🔧 **Flexible API** - Supports CSS selectors, NodeList, or element arrays
+- 🎬 **`observeCross`** - Standalone viewport-crossing helper with the nine AOS anchor placements
 - 📦 **Multiple formats** - ESM, CommonJS, and UMD builds
 
 ## Installation
@@ -164,6 +165,77 @@ window.addEventListener('scroll-trigger:change', (e) => {
   console.log('Previous element:', e.detail.previousSection);
 });
 ```
+
+## observeCross
+
+`observeCross` is the viewport-crossing machinery behind ScrollTrigger, exported on its own. Give it elements and a trigger line and it calls you back when they cross it - no index tracking, no scroll-spy, no opinions about what you do next. It is the building block for scroll reveals, lazy loading, sticky headers, analytics impressions, and anything else that needs "this element reached that line."
+
+```javascript
+import { observeCross } from '@magic-spells/scroll-trigger';
+
+const reveal = observeCross('.card', {
+  offset: '10%',
+  placement: 'center-bottom',
+  once: true,
+  onCross: (el) => el.classList.add('is-visible'),
+});
+
+// later
+reveal.refresh(); // recompute trigger lines after a layout change
+reveal.destroy(); // disconnect everything
+```
+
+### Options
+
+| Option | Type | Default | Description |
+|--------|------|---------|-------------|
+| `offset` | `number\|string` | `0` | Distance above the viewport edge to place the trigger line (px, or a percentage of the viewport height like `'20%'`) |
+| `placement` | `string` | `'top-bottom'` | Anchor placement - which edge of the element has to reach which edge of the viewport |
+| `once` | `boolean` | `false` | Stop observing an element after it crosses |
+| `syncOnScroll` | `boolean` | `false` | Also re-check on a passive scroll listener |
+| `threshold` | `number` | `0` | IntersectionObserver threshold. Changes only how sensitively the observer wakes up - never where the trigger line sits |
+| `onCross` | `function` | - | `(element, entry) => {}` when an element crosses the line |
+| `onExit` | `function` | - | `(element, entry) => {}` when an element moves back below the line (never fires under `once: true`) |
+
+`elements` accepts a CSS selector, a single element, a NodeList, an HTMLCollection, or an array.
+
+`entry` is the IntersectionObserverEntry that woke the callback, or `null` when the check came from a scroll re-check or a `refresh()`.
+
+### Returns
+
+| Method | Description |
+|--------|-------------|
+| `refresh()` | Re-measure element heights, rebuild the trigger lines, and re-check the current state |
+| `destroy()` | Disconnect every observer and listener |
+
+### Anchor placements
+
+Placements are named `<element-edge>-<viewport-edge>` and match [AOS](https://github.com/michalsnik/aos) exactly: the first half is the part of the element being measured, the second half is the line in the viewport it has to reach.
+
+| Placement | Fires when |
+|-----------|------------|
+| `top-bottom` *(default)* | The element's top reaches the bottom of the viewport |
+| `center-bottom` | The element's middle reaches the bottom of the viewport |
+| `bottom-bottom` | The element's bottom reaches the bottom of the viewport |
+| `top-center` | The element's top reaches the middle of the viewport |
+| `center-center` | The element's middle reaches the middle of the viewport |
+| `bottom-center` | The element's bottom reaches the middle of the viewport |
+| `top-top` | The element's top reaches the top of the viewport |
+| `center-top` | The element's middle reaches the top of the viewport |
+| `bottom-top` | The element's bottom reaches the top of the viewport |
+
+`offset` moves the line further up from whichever viewport edge the placement names.
+
+### Notes
+
+- **Trigger lines are IntersectionObserver root margins**, not scroll math - nothing runs on the main thread until an element actually reaches its line.
+- **Positions are re-measured at callback time.** Entry rects are snapshots from when the intersection was computed, which can be frames stale.
+- **`syncOnScroll` is a fallback, not the engine.** IntersectionObserver can lag several frames during momentum scrolling on mobile Safari; turn this on for reveals that have to feel instant, and leave it off otherwise (it costs a rect read per element per frame). ScrollTrigger turns it on internally.
+- **Element-edge placements measure lazily.** `center-*` and `bottom-*` need the element's height, so a first-stage observer waits for the element's first intersecting pixel before measuring - heights read before stylesheets and layout settle are wrong.
+- **Viewport-dependent lines rebuild themselves** on resize, orientation change, and layout shifts (debounced). A pixel offset with the default placement is a constant and never rebuilds.
+- **Safe under Node.** Called without a `window` (static prerendering) it returns an inert handle instead of throwing.
+
+Via the UMD build the helper hangs off the global class: `ScrollTrigger.observeCross(...)`.
 
 ## Examples
 

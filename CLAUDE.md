@@ -28,8 +28,11 @@ ScrollTrigger is a lightweight, performant JavaScript plugin that tracks when se
 ```
 scroll-trigger/
 ├── src/
-│   ├── scroll-trigger.js     - Main ScrollTrigger class
-│   └── scroll-trigger.scss   - Optional utility styles
+│   ├── scroll-trigger.js     - Main ScrollTrigger class (ESM/CJS entry)
+│   ├── observe-cross.js      - Standalone observeCross helper
+│   ├── utils.js              - Shared pure helpers (element + offset resolution)
+│   ├── umd.js                - UMD entry (keeps the global as the class)
+│   └── scroll-trigger.css    - Optional utility styles
 ├── dist/                      - Built files (generated)
 │   ├── scroll-trigger.esm.js
 │   ├── scroll-trigger.cjs.js
@@ -39,7 +42,8 @@ scroll-trigger/
 │   ├── scroll-trigger.min.css
 │   └── scroll-trigger.scss
 ├── demo/
-│   └── index.html            - Live demonstration with 6 sections
+│   ├── index.html            - Live demonstration with 6 sections
+│   └── observe-cross.html    - observeCross placements, offsets, and once
 ├── rollup.config.mjs         - Multi-format build configuration
 └── package.json
 ```
@@ -51,12 +55,11 @@ scroll-trigger/
 The main export is a pure JavaScript class (not a web component) that provides scroll-based section tracking:
 
 **Private Fields:**
-- `#sections` - Array of DOM elements being tracked
+- `#elements` - Array of DOM elements being tracked
 - `#currentIndex` - Index of currently active section (-1 if none)
-- `#observer` - IntersectionObserver instance
+- `#crossObservers` - observeCross handles, one per distinct effective offset
 - `#resizeObserver` - ResizeObserver for percentage offsets (optional)
 - `#config` - Configuration object with defaults
-- `#intersectingMap` - Map tracking which sections are intersecting
 - `#throttleTimer` - Timer for throttling updates
 - `#isDestroyed` - Flag to prevent operations after cleanup
 
@@ -72,21 +75,48 @@ The main export is a pure JavaScript class (not a web component) that provides s
 
 #### IntersectionObserver Implementation
 
-The plugin uses IntersectionObserver with a custom rootMargin to create a "trigger zone":
+The class does not build observers itself - it delegates to `observeCross`, which
+creates one IntersectionObserver per trigger line:
 
 ```javascript
-const offsetPx = this.#calculateOffset(this.#config.offset);
-const rootMargin = `-${offsetPx}px 0px -${window.innerHeight - offsetPx - 1}px 0px`;
+rootMargin: `${ROOT_TOP_MARGIN}px 0px ${-margin}px 0px`;
 ```
 
-This creates a horizontal line at the specified offset from the top of the viewport. When a section crosses this line, it becomes "active".
+`margin` is the pixel distance from the bottom of the viewport to the trigger line,
+so a negative bottom root margin lifts the observer's boundary to exactly that line.
+The large positive top margin keeps "intersecting" equivalent to "has crossed the
+line" - without it an element scrolled past the top of the viewport would report an
+exit it never made, and a `*-top` placement would collapse the root to zero height.
 
 **How it works:**
-1. Each section is observed by the IntersectionObserver
-2. When a section enters the trigger zone, it's marked as intersecting
-3. The first intersecting section becomes the active section
-4. If no sections are intersecting, fallback logic finds the closest section above the trigger line
+1. Sections are grouped by effective offset (`data-animate-offset` or the global config)
+2. Each group gets its own `observeCross`, with `syncOnScroll: true` for momentum-scroll lag
+3. A crossing (or an exit) schedules a throttled index update
+4. `#updateActiveIndex` re-measures every section's rect and takes the last one whose top is at or above its own trigger line
 5. When the active index changes, the `onIndexChange` callback fires
+
+The `threshold` option is passed through to the observers. It affects only how
+sensitively they wake up - the active index always comes from fresh rect math.
+
+#### observeCross
+
+`observeCross(elements, options)` is the crossing machinery on its own, exported
+alongside the class. It owns the nine AOS anchor placements
+(`<element-edge>-<viewport-edge>`), the offset parsing, the conditional resize
+rebuild, and the optional passive scroll re-check. `src/scroll-trigger.js` is one
+of its consumers, not its owner - fixes belong in `src/observe-cross.js`.
+
+Two rules keep it honest:
+- **The observer boundary and the geometry check are the same number.** `#marginFor()`
+  produces both, so the observer can never wake up on one side of the line while the
+  rect check reads the other.
+- **Rects are re-measured in the callback.** Entry rects are snapshots from when the
+  intersection was computed, which can be frames stale during momentum scrolling.
+
+Element-edge placements (`center-*`, `bottom-*`) need the element's height. Heights
+measured before stylesheets and layout settle are wrong, so those elements go through
+a first-stage zero-threshold observer that waits for their first intersecting pixel,
+measures there, and then hands them to the real observer.
 
 #### Offset Calculation (Pixels vs Percentages)
 
@@ -106,7 +136,7 @@ offset: '75%'  // Trigger at 75% from bottom (25% down the viewport)
 
 When using percentages:
 - The offset is calculated as: `Math.round(window.innerHeight * (percentage / 100))`
-- A ResizeObserver watches for viewport changes and recalculates the trigger zone
+- A ResizeObserver (plus resize/orientationchange listeners) watches for viewport changes and rebuilds the trigger lines, debounced
 - This ensures responsive behavior across different screen sizes
 
 #### Throttling & Performance

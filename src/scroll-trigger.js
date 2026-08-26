@@ -1,4 +1,10 @@
 import "./scroll-trigger.css";
+import { observeCross } from "./observe-cross.js";
+import {
+  isPercentageOffset,
+  offsetToPixels,
+  resolveElements,
+} from "./utils.js";
 
 /**
  * ScrollTrigger - Scroll spy plugin for tracking section visibility
@@ -19,7 +25,7 @@ class ScrollTrigger {
   // Private fields
   #elements = [];
   #currentIndex = -1;
-  #observer = null;
+  #crossObservers = [];
   #config = {
     offset: 100,
     threshold: 0.1,
@@ -27,11 +33,9 @@ class ScrollTrigger {
     behavior: "smooth",
     onIndexChange: null,
   };
-  #intersectingMap = new Map();
   #throttleTimer = null;
   #isDestroyed = false;
   #resizeObserver = null;
-  #scrollHandler = null;
 
   /**
    * Create a new ScrollTrigger instance
@@ -48,56 +52,20 @@ class ScrollTrigger {
     this.#config = { ...this.#config, ...options };
 
     // Get elements
-    this.#elements = this.#getElements(this.#config.sections);
+    this.#elements = resolveElements(this.#config.sections);
 
     if (this.#elements.length === 0) {
       console.warn("ScrollTrigger: No elements found");
       return;
     }
 
-    // Initialize observer
-    this.#setupObserver();
+    // Initialize observers
+    this.#setupObservers();
 
     // Watch for viewport resize if any element uses percentage offset
     if (this.#hasPercentageOffsets()) {
       this.#setupResizeObserver();
     }
-
-    // Add scroll listener as fallback for mobile
-    this.#setupScrollListener();
-  }
-
-  /**
-   * Get elements from various input types
-   */
-  #getElements(input) {
-    if (typeof input === "string") {
-      return Array.from(document.querySelectorAll(input));
-    } else if (input instanceof NodeList) {
-      return Array.from(input);
-    } else if (Array.isArray(input)) {
-      return input;
-    }
-    return [];
-  }
-
-  /**
-   * Check if offset is a percentage value
-   */
-  #isPercentageOffset(offset) {
-    return typeof offset === "string" && offset.includes("%");
-  }
-
-  /**
-   * Calculate pixel offset from bottom of viewport
-   * Converts percentage or pixel value to pixels from bottom
-   */
-  #calculateOffset(offset) {
-    if (this.#isPercentageOffset(offset)) {
-      const percentage = parseFloat(offset) / 100;
-      return Math.round(window.innerHeight * percentage);
-    }
-    return typeof offset === "number" ? offset : 100;
   }
 
   /**
@@ -123,84 +91,65 @@ class ScrollTrigger {
    */
   #hasPercentageOffsets() {
     // Check global config
-    if (this.#isPercentageOffset(this.#config.offset)) {
+    if (isPercentageOffset(this.#config.offset)) {
       return true;
     }
 
     // Check if any element has a custom percentage offset
     return this.#elements.some((element) => {
       const customOffset = element.getAttribute("data-animate-offset");
-      return customOffset && this.#isPercentageOffset(customOffset);
+      return customOffset && isPercentageOffset(customOffset);
     });
   }
 
   /**
    * Setup ResizeObserver to handle viewport changes with percentage offsets
+   * The trigger lines themselves rebuild inside observeCross - this only forces
+   * the index to be recomputed against the new viewport height.
    */
   #setupResizeObserver() {
     this.#resizeObserver = new ResizeObserver(() => {
-      // Recreate observer with new calculated offset
-      if (this.#observer) {
-        this.#observer.disconnect();
-      }
-      this.#setupObserver();
+      this.#throttleIndexUpdate();
     });
 
     this.#resizeObserver.observe(document.documentElement);
   }
 
   /**
-   * Setup scroll listener as fallback for mobile browsers
-   * IntersectionObserver can miss events during momentum scrolling
+   * Watch every element against its own trigger line
+   * Elements are grouped by effective offset so a crossing is reported at the
+   * exact scroll position where the active index can change.
    */
-  #setupScrollListener() {
-    this.#scrollHandler = () => {
-      this.#throttleIndexUpdate();
-    };
+  #setupObservers() {
+    const groups = new Map();
 
-    window.addEventListener("scroll", this.#scrollHandler, { passive: true });
-  }
-
-  /**
-   * Setup IntersectionObserver to track sections
-   */
-  #setupObserver() {
-    // Calculate pixel offset from bottom (handles both px and %)
-    const offsetPx = this.#calculateOffset(this.#config.offset);
-
-    // Create observer with offset from bottom
-    // Top margin removes everything above, bottom margin creates trigger zone
-    const rootMargin = `0px 0px -${offsetPx}px 0px`;
-
-    this.#observer = new IntersectionObserver(
-      (entries) => this.#handleIntersection(entries),
-      {
-        root: null,
-        rootMargin: rootMargin,
-        threshold: this.#config.threshold,
-      },
-    );
-
-    // Observe all elements
     this.#elements.forEach((element) => {
-      this.#observer.observe(element);
-      this.#intersectingMap.set(element, false);
+      const offset = this.#getElementOffset(element);
+      const key = String(offset);
+      if (!groups.has(key)) groups.set(key, { offset, elements: [] });
+      groups.get(key).elements.push(element);
+    });
+
+    groups.forEach(({ offset, elements }) => {
+      this.#crossObservers.push(
+        observeCross(elements, {
+          offset,
+          placement: "top-bottom",
+          threshold: this.#config.threshold,
+          syncOnScroll: true,
+          onCross: () => this.#throttleIndexUpdate(),
+          onExit: () => this.#throttleIndexUpdate(),
+        }),
+      );
     });
   }
 
   /**
-   * Handle intersection events
+   * Disconnect every trigger-line observer
    */
-  #handleIntersection(entries) {
-    if (this.#isDestroyed) return;
-
-    // Update intersecting map
-    entries.forEach((entry) => {
-      this.#intersectingMap.set(entry.target, entry.isIntersecting);
-    });
-
-    // Throttle index calculation
-    this.#throttleIndexUpdate();
+  #teardownObservers() {
+    this.#crossObservers.forEach((observer) => observer.destroy());
+    this.#crossObservers = [];
   }
 
   /**
@@ -230,7 +179,7 @@ class ScrollTrigger {
     for (let i = this.#elements.length - 1; i >= 0; i--) {
       const element = this.#elements[i];
       const elementOffset = this.#getElementOffset(element);
-      const offsetPx = this.#calculateOffset(elementOffset);
+      const offsetPx = offsetToPixels(elementOffset, 100);
       const triggerLine = window.innerHeight - offsetPx;
 
       const rect = element.getBoundingClientRect();
@@ -329,7 +278,7 @@ class ScrollTrigger {
 
     // Calculate offset from bottom in pixels (respects element's custom offset)
     const elementOffset = this.#getElementOffset(element);
-    const offsetPx = this.#calculateOffset(elementOffset);
+    const offsetPx = offsetToPixels(elementOffset, 100);
     const triggerLine = window.innerHeight - offsetPx;
 
     const rect = element.getBoundingClientRect();
@@ -363,11 +312,9 @@ class ScrollTrigger {
   refresh() {
     if (this.#isDestroyed) return;
 
-    // Re-observe elements to update positions
-    this.#elements.forEach((element) => {
-      this.#observer.unobserve(element);
-      this.#observer.observe(element);
-    });
+    // Rebuild trigger lines - per-element offsets may have changed too
+    this.#teardownObservers();
+    this.#setupObservers();
 
     // Force index update
     this.#updateActiveIndex();
@@ -400,10 +347,8 @@ class ScrollTrigger {
     }
 
     if (needsObserverUpdate) {
-      if (this.#observer) {
-        this.#observer.disconnect();
-      }
-      this.#setupObserver();
+      this.#teardownObservers();
+      this.#setupObservers();
     }
   }
 
@@ -421,11 +366,8 @@ class ScrollTrigger {
       this.#throttleTimer = null;
     }
 
-    // Disconnect observer
-    if (this.#observer) {
-      this.#observer.disconnect();
-      this.#observer = null;
-    }
+    // Disconnect trigger-line observers and their scroll listeners
+    this.#teardownObservers();
 
     // Disconnect resize observer
     if (this.#resizeObserver) {
@@ -433,14 +375,7 @@ class ScrollTrigger {
       this.#resizeObserver = null;
     }
 
-    // Remove scroll listener
-    if (this.#scrollHandler) {
-      window.removeEventListener("scroll", this.#scrollHandler);
-      this.#scrollHandler = null;
-    }
-
-    // Clear maps and arrays
-    this.#intersectingMap.clear();
+    // Clear arrays
     this.#elements = [];
     this.#currentIndex = -1;
   }
@@ -448,3 +383,4 @@ class ScrollTrigger {
 
 // Export for external use
 export default ScrollTrigger;
+export { observeCross };

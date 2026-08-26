@@ -48,7 +48,7 @@ export default [
   },
   // UMD build
   {
-    input: 'src/scroll-trigger.js',
+    input: 'src/umd.js',
     output: {
       file: `dist/${name}.js`,
       format: 'umd',
@@ -60,7 +60,7 @@ export default [
   },
   // Minified UMD for browsers
   {
-    input: 'src/scroll-trigger.js',
+    input: 'src/umd.js',
     output: {
       file: `dist/${name}.min.js`,
       format: 'umd',
