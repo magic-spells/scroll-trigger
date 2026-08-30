@@ -1,580 +1,1310 @@
 <!doctype html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>ScrollTrigger Demo</title>
-    <link rel="stylesheet" href="scroll-trigger.min.css" />
-    <style>
-      * {
-        margin: 0;
-        padding: 0;
-        box-sizing: border-box;
-      }
+	<head>
+		<meta charset="UTF-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1" />
+		<title>Scroll Trigger — @magic-spells</title>
 
-      body {
-        font-family:
-          -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-        line-height: 1.6;
-      }
+		<link rel="preconnect" href="https://fonts.googleapis.com" />
+		<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+		<link
+			href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;1,300;1,400&family=Outfit:wght@200;300;400;500&display=swap"
+			rel="stylesheet" />
+		<link rel="stylesheet" href="scroll-trigger.min.css" />
 
-      /* Navigation */
-      .nav {
-        position: fixed;
-        top: 0;
-        left: 0;
-        right: 0;
-        background: white;
-        border-bottom: 2px solid #e5e7eb;
-        z-index: 100;
-        padding: 1rem 2rem;
-      }
+		<!-- sibling package, via published npm build on the CDN -->
+		<link
+			rel="stylesheet"
+			href="https://unpkg.com/@magic-spells/split-text@0.2.0/dist/split-text.min.css" />
+		<script defer src="https://unpkg.com/@magic-spells/split-text@0.2.0"></script>
 
-      .nav-container {
-        max-width: 1200px;
-        margin: 0 auto;
-        display: flex;
-        gap: 1rem;
-        overflow-x: auto;
-        scrollbar-width: none;
-        -webkit-overflow-scrolling: touch;
-      }
+		<style>
+			:root {
+				/* Coral is a warm red-orange at roughly 12°; the ground is its cool
+				   complement pushed to near-black, so the accent reads as a lit signal
+				   line rather than as a second surface colour. */
+				--bg-deep: #06090d;
+				--bg-card: #0d1218;
+				--bg-raise: #131a22;
+				--border: #1c242e;
+				--border-accent: #2a3541;
 
-      .nav-container::-webkit-scrollbar {
-        display: none;
-      }
+				/* Approved accent. --accent carries edges, rules and text; the two
+				   darker steps are surface and border colours only. */
+				--accent: #ff7a5c;
+				--accent-mid: #f4603f;
+				--accent-deep: #9c3421;
+				--accent-glow: rgba(255, 122, 92, 0.15);
 
-      .nav-item {
-        padding: 0.5rem 1.5rem;
-        background: #f3f4f6;
-        border: 2px solid transparent;
-        border-radius: 8px;
-        cursor: pointer;
-        white-space: nowrap;
-        transition: all 0.2s ease;
-        font-weight: 500;
-        text-decoration: none;
-        color: #1f2937;
-      }
+				/* Text ramp, measured on --bg-card #0d1218: cream 16.4:1 ·
+				   text 14.2:1 · text-dim 8.4:1 · accent 7.0:1. */
+				--cream: #f3f5f8;
+				--text: #e3e8ee;
+				--text-dim: #a7b1bd;
 
-      .nav-item:hover {
-        background: #e5e7eb;
-      }
+				--font-display: 'Cormorant Garamond', Georgia, serif;
+				--font-body: 'Outfit', system-ui, sans-serif;
+				--font-mono: 'Courier New', ui-monospace, monospace;
 
-      .nav-item.active {
-        background: #3b82f6;
-        color: white;
-        border-color: #2563eb;
-      }
+				--topbar-h: 3.75rem;
+			}
 
-      /* Main content */
-      .main {
-        margin-top: 80px;
-      }
+			* {
+				box-sizing: border-box;
+				margin: 0;
+				padding: 0;
+			}
 
-      /* Sections */
-      .section {
-        min-height: 100vh;
-        padding: 4rem 2rem;
-        display: flex;
-        flex-direction: column;
-        justify-content: center;
-        align-items: center;
-        border-bottom: 2px solid #e5e7eb;
-      }
+			html {
+				background: var(--bg-deep);
+			}
 
-      .section:nth-child(odd) {
-        background: #f9fafb;
-      }
+			body {
+				font-family: var(--font-body);
+				font-weight: 300;
+				color: var(--text);
+				background: var(--bg-deep);
+				-webkit-font-smoothing: antialiased;
+			}
 
-      .section:nth-child(even) {
-        background: white;
-      }
+			/* ---- The trigger line ---- */
 
-      .section-content {
-        max-width: 800px;
-        text-align: center;
-      }
+			/* A fixed rule at exactly the height the tracker measures from. Sits under
+			   the topbar (z 200) and the controls (z 500) so it never covers a control. */
+			.trigger-line {
+				position: fixed;
+				left: 0;
+				right: 0;
+				bottom: var(--line-offset, 15%);
+				z-index: 90;
+				height: 0;
+				border-top: 1px dashed var(--accent-mid);
+				pointer-events: none;
+				opacity: 0.85;
+				transition: bottom 0.25s ease;
+			}
 
-      .section h2 {
-        font-size: 3rem;
-        margin-bottom: 1rem;
-        color: #1f2937;
-      }
+			.trigger-line[hidden] {
+				display: none;
+			}
 
-      .section p {
-        font-size: 1.25rem;
-        color: #6b7280;
-        margin-bottom: 2rem;
-      }
+			.trigger-line span {
+				position: absolute;
+				right: 1rem;
+				bottom: 0.35rem;
+				font-family: var(--font-mono);
+				font-size: 0.62rem;
+				letter-spacing: 0.16em;
+				text-transform: uppercase;
+				color: var(--accent);
+			}
 
-      /* Product Grid */
-      .product-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-        gap: 1rem;
-        width: 100%;
-        max-width: 1200px;
-        margin-top: 2rem;
-      }
+			/* ---- Topbar: the component driving itself ---- */
 
-      .product-card {
-        background: white;
-        border: 1px solid #e5e7eb;
-        border-radius: 8px;
-        padding: 1.5rem;
-        text-align: center;
-      }
+			.topbar {
+				position: sticky;
+				top: 0;
+				z-index: 200;
+				display: flex;
+				align-items: center;
+				gap: 1.5rem;
+				height: var(--topbar-h);
+				padding: 0 1.25rem;
+				background: rgba(13, 18, 24, 0.92);
+				backdrop-filter: blur(14px);
+				border-bottom: 1px solid var(--border);
+			}
 
-      .product-card h3 {
-        font-size: 1.125rem;
-        margin-bottom: 0.5rem;
-        color: #1f2937;
-      }
+			.brand {
+				flex: none;
+				font-family: var(--font-display);
+				font-size: 1.3rem;
+				color: var(--cream);
+				letter-spacing: -0.01em;
+				text-decoration: none;
+			}
 
-      .product-card p {
-        font-size: 0.875rem;
-        color: #6b7280;
-        margin: 0;
-      }
+			.brand em {
+				font-style: italic;
+				color: var(--accent);
+			}
 
-      /* Scroll Animations */
-      [data-animate-fade-up] {
-        opacity: 0;
-        transform: translateY(60px);
-        filter: blur(3px);
-        transition:
-          opacity 0.5s ease-out,
-          transform 0.5s ease-out,
-          filter 0.5s ease-out;
-      }
+			/* horizontal, scrollable, and auto-centred on the active chapter */
+			.chapters {
+				display: flex;
+				gap: 0.35rem;
+				overflow-x: auto;
+				scrollbar-width: none;
+				-webkit-overflow-scrolling: touch;
+			}
 
-      [data-animate-fade-up][data-animate-loaded] {
-        opacity: 1;
-        transform: translateY(0);
-        filter: blur(0);
-      }
+			.chapters::-webkit-scrollbar {
+				display: none;
+			}
 
-      /* Debug Panel */
-      .debug-panel {
-        position: fixed;
-        bottom: 2rem;
-        right: 2rem;
-        background: white;
-        border: 2px solid #3b82f6;
-        border-radius: 8px;
-        padding: 1rem;
-        box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
-        font-family: "Courier New", monospace;
-        font-size: 0.875rem;
-        z-index: 200;
-      }
+			.chapter {
+				flex: none;
+				font-family: var(--font-body);
+				font-weight: 300;
+				font-size: 0.78rem;
+				letter-spacing: 0.06em;
+				color: var(--text-dim);
+				background: transparent;
+				border: 1px solid transparent;
+				border-radius: 100px;
+				padding: 0.35em 0.9em;
+				cursor: pointer;
+				white-space: nowrap;
+				transition:
+					color 0.25s ease,
+					border-color 0.25s ease,
+					background-color 0.25s ease;
+			}
 
-      .debug-panel h4 {
-        margin-bottom: 0.5rem;
-        color: #3b82f6;
-      }
+			.chapter:hover {
+				color: var(--accent);
+			}
 
-      .debug-item {
-        margin: 0.25rem 0;
-        color: #6b7280;
-      }
+			.chapter[data-active] {
+				color: var(--accent);
+				border-color: var(--accent-deep);
+				background: rgba(255, 122, 92, 0.1);
+			}
 
-      .debug-item strong {
-        color: #1f2937;
-      }
-    </style>
-  </head>
-  <body>
-    <!-- Navigation -->
-    <nav class="nav" aria-label="Product categories">
-      <div class="nav-container" id="nav-container">
-        <a href="#cereal" class="nav-item" data-index="0">Cereal</a>
-        <a href="#granola" class="nav-item" data-index="1">Granola</a>
-        <a href="#snacks" class="nav-item" data-index="2">Snacks</a>
-        <a href="#cookies" class="nav-item" data-index="3">Cookies</a>
-        <a href="#crackers" class="nav-item" data-index="4">Crackers</a>
-        <a href="#protein-bars" class="nav-item" data-index="5">Protein Bars</a>
-      </div>
-    </nav>
+			/* ---- Page ---- */
 
-    <!-- Main Content -->
-    <main class="main">
-      <!-- Section 1: Cereal -->
-      <section
-        id="cereal"
-        class="section"
-        data-section="cereal"
-        aria-labelledby="cereal-heading"
-      >
-        <div class="section-content">
-          <h2 id="cereal-heading" data-section-trigger>🥣 Cereal</h2>
-          <p>Start your day with our delicious breakfast cereals</p>
-        </div>
-        <div class="product-grid" data-animate-fade-up data-animate-offset="15%">
-          <div class="product-card">
-            <h3>Honey Oats</h3>
-            <p>$4.99</p>
-          </div>
-          <div class="product-card">
-            <h3>Cocoa Crunch</h3>
-            <p>$5.49</p>
-          </div>
-          <div class="product-card">
-            <h3>Berry Blast</h3>
-            <p>$5.99</p>
-          </div>
-          <div class="product-card">
-            <h3>Maple Flakes</h3>
-            <p>$4.79</p>
-          </div>
-          <div class="product-card">
-            <h3>Banana Bites</h3>
-            <p>$5.29</p>
-          </div>
-          <div class="product-card">
-            <h3>Apple Rings</h3>
-            <p>$4.99</p>
-          </div>
-        </div>
-      </section>
+			main {
+				max-width: 62rem;
+				margin: 0 auto;
+				padding: 0 1.5rem 10rem;
+			}
 
-      <!-- Section 2: Granola -->
-      <section
-        id="granola"
-        class="section"
-        data-section="granola"
-        aria-labelledby="granola-heading"
-      >
-        <div class="section-content">
-          <h2 id="granola-heading" data-section-trigger>🥜 Granola</h2>
-          <p>Crunchy, nutritious granola for any time of day</p>
-        </div>
-        <div class="product-grid" data-animate-fade-up>
-          <div class="product-card">
-            <h3>Almond Crunch</h3>
-            <p>$6.99</p>
-          </div>
-          <div class="product-card">
-            <h3>Pecan Mix</h3>
-            <p>$7.49</p>
-          </div>
-          <div class="product-card">
-            <h3>Honey Clusters</h3>
-            <p>$6.79</p>
-          </div>
-          <div class="product-card">
-            <h3>Dark Chocolate</h3>
-            <p>$7.99</p>
-          </div>
-          <div class="product-card">
-            <h3>Berry Medley</h3>
-            <p>$6.99</p>
-          </div>
-          <div class="product-card">
-            <h3>Coconut Delight</h3>
-            <p>$7.29</p>
-          </div>
-        </div>
-      </section>
+			/* ---- Hero ---- */
 
-      <!-- Section 3: Snacks -->
-      <section
-        id="snacks"
-        class="section"
-        data-section="snacks"
-        aria-labelledby="snacks-heading"
-      >
-        <div class="section-content">
-          <h2 id="snacks-heading" data-section-trigger>🍿 Snacks</h2>
-          <p>Perfect treats for snacking throughout the day</p>
-        </div>
-        <div class="product-grid" data-animate-fade-up>
-          <div class="product-card">
-            <h3>Trail Mix</h3>
-            <p>$5.99</p>
-          </div>
-          <div class="product-card">
-            <h3>Popcorn</h3>
-            <p>$3.99</p>
-          </div>
-          <div class="product-card">
-            <h3>Pretzels</h3>
-            <p>$4.49</p>
-          </div>
-          <div class="product-card">
-            <h3>Rice Cakes</h3>
-            <p>$3.79</p>
-          </div>
-          <div class="product-card">
-            <h3>Veggie Chips</h3>
-            <p>$4.99</p>
-          </div>
-          <div class="product-card">
-            <h3>Fruit Strips</h3>
-            <p>$5.49</p>
-          </div>
-        </div>
-      </section>
+			.hero {
+				position: relative;
+				display: flex;
+				flex-direction: column;
+				align-items: center;
+				justify-content: center;
+				text-align: center;
+				min-height: calc(100svh - var(--topbar-h));
+				padding: 4rem 0 5rem;
+			}
 
-      <!-- Section 4: Cookies -->
-      <section
-        id="cookies"
-        class="section"
-        data-section="cookies"
-        aria-labelledby="cookies-heading"
-      >
-        <div class="section-content">
-          <h2 id="cookies-heading" data-section-trigger>🍪 Cookies</h2>
-          <p>Sweet and delicious cookies for every craving</p>
-        </div>
-        <div class="product-grid" data-animate-fade-up data-animate-offset="20%">
-          <div class="product-card">
-            <h3>Chocolate Chip</h3>
-            <p>$4.99</p>
-          </div>
-          <div class="product-card">
-            <h3>Oatmeal Raisin</h3>
-            <p>$4.79</p>
-          </div>
-          <div class="product-card">
-            <h3>Double Chocolate</h3>
-            <p>$5.49</p>
-          </div>
-          <div class="product-card">
-            <h3>Peanut Butter</h3>
-            <p>$4.99</p>
-          </div>
-          <div class="product-card">
-            <h3>Sugar Cookies</h3>
-            <p>$4.49</p>
-          </div>
-          <div class="product-card">
-            <h3>Shortbread</h3>
-            <p>$5.29</p>
-          </div>
-        </div>
-      </section>
+			.hero::before {
+				content: '';
+				position: absolute;
+				top: -14%;
+				left: 50%;
+				width: min(1000px, 100vw);
+				height: 820px;
+				transform: translateX(-50%);
+				background: radial-gradient(ellipse, var(--accent-glow), transparent 68%);
+				pointer-events: none;
+				z-index: 0;
+			}
 
-      <!-- Section 5: Crackers -->
-      <section
-        id="crackers"
-        class="section"
-        data-section="crackers"
-        aria-labelledby="crackers-heading"
-      >
-        <div class="section-content">
-          <h2 id="crackers-heading" data-section-trigger>🧈 Crackers</h2>
-          <p>Crispy crackers perfect for pairing</p>
-        </div>
-        <div class="product-grid" data-animate-fade-up>
-          <div class="product-card">
-            <h3>Wheat Thins</h3>
-            <p>$3.99</p>
-          </div>
-          <div class="product-card">
-            <h3>Cheese Crackers</h3>
-            <p>$4.29</p>
-          </div>
-          <div class="product-card">
-            <h3>Sesame Rounds</h3>
-            <p>$4.49</p>
-          </div>
-          <div class="product-card">
-            <h3>Multi-grain</h3>
-            <p>$4.79</p>
-          </div>
-          <div class="product-card">
-            <h3>Rice Crackers</h3>
-            <p>$3.99</p>
-          </div>
-          <div class="product-card">
-            <h3>Water Crackers</h3>
-            <p>$3.49</p>
-          </div>
-        </div>
-      </section>
+			.hero > * {
+				position: relative;
+			}
 
-      <!-- Section 6: Protein Bars -->
-      <section
-        id="protein-bars"
-        class="section"
-        data-section="protein-bars"
-        aria-labelledby="protein-bars-heading"
-      >
-        <div class="section-content">
-          <h2 id="protein-bars-heading" data-section-trigger>
-            💪 Protein Bars
-          </h2>
-          <p>Fuel your workout with our protein-packed bars</p>
-        </div>
-        <div class="product-grid" data-animate-fade-up data-animate-offset="50">
-          <div class="product-card">
-            <h3>Chocolate Peanut</h3>
-            <p>$2.99</p>
-          </div>
-          <div class="product-card">
-            <h3>Vanilla Almond</h3>
-            <p>$2.99</p>
-          </div>
-          <div class="product-card">
-            <h3>Berry Blast</h3>
-            <p>$3.29</p>
-          </div>
-          <div class="product-card">
-            <h3>Caramel Crunch</h3>
-            <p>$3.49</p>
-          </div>
-          <div class="product-card">
-            <h3>Cookie Dough</h3>
-            <p>$3.29</p>
-          </div>
-          <div class="product-card">
-            <h3>Mint Chocolate</h3>
-            <p>$2.99</p>
-          </div>
-        </div>
-      </section>
-    </main>
+			.hero-badge {
+				max-width: 100%;
+				margin-bottom: 2.25rem;
+				padding: 0.45em 1.25em;
+				color: var(--accent);
+				border: 1px solid var(--border-accent);
+				border-radius: 100px;
+				font-size: 0.9rem;
+				font-weight: 400;
+				letter-spacing: 0.1em;
+				text-decoration: none;
+				text-transform: uppercase;
+				transition: border-color 0.3s ease;
+			}
 
-    <!-- Debug Panel -->
-    <div class="debug-panel">
-      <h4>ScrollTrigger Debug</h4>
-      <div class="debug-item">
-        Active Index: <strong id="debug-index">-</strong>
-      </div>
-      <div class="debug-item">
-        Section: <strong id="debug-section">-</strong>
-      </div>
-      <div class="debug-item">
-        Scroll Position: <strong id="debug-scroll">0px</strong>
-      </div>
-    </div>
+			.hero-badge:hover {
+				border-color: var(--accent-mid);
+			}
 
-    <script type="module" src="scroll-trigger.esm.js"></script>
-    <script type="module">
-      import ScrollTrigger from "./scroll-trigger.esm.js";
+			.hero h1 {
+				font-family: var(--font-display);
+				font-weight: 300;
+				font-size: clamp(2.6rem, 7.5vw, 5.25rem);
+				line-height: 1.03;
+				color: var(--cream);
+				letter-spacing: -0.02em;
+				margin-bottom: 1.5rem;
+			}
 
-      // Get DOM elements
-      const navContainer = document.getElementById("nav-container");
-      const navItems = Array.from(document.querySelectorAll(".nav-item"));
-      const sections = Array.from(document.querySelectorAll(".section"));
-      const debugIndex = document.getElementById("debug-index");
-      const debugSection = document.getElementById("debug-section");
-      const debugScroll = document.getElementById("debug-scroll");
+			.hero h1 em {
+				font-style: italic;
+				color: var(--accent);
+			}
 
-      // Initialize ScrollTrigger
-      const trigger = new ScrollTrigger({
-        sections: "[data-section-trigger]",
-        offset: "50%",
-        threshold: 0,
-        throttle: 50,
-        behavior: "smooth",
-        onIndexChange: ({ currentIndex, previousIndex, currentElement, previousElement }) => {
-          console.log(`Section changed from ${previousIndex} to ${currentIndex}`);
-          console.log("Current element:", currentElement);
-          console.log("Previous element:", previousElement);
+			.hero-tagline {
+				max-width: 34rem;
+				font-size: 1.05rem;
+				line-height: 1.7;
+				color: var(--text);
+				text-wrap: pretty;
+			}
 
-          // Update navigation
-          updateNavigation(currentIndex);
+			.install {
+				display: inline-block;
+				margin-top: 2.5rem;
+				font-family: var(--font-mono);
+				font-size: 0.85rem;
+				color: var(--accent);
+				background: var(--bg-card);
+				border: 1px solid var(--border);
+				border-radius: 8px;
+				padding: 0.55em 1.2em;
+				user-select: all;
+			}
 
-          // Update debug panel
-          updateDebugPanel(currentIndex, currentElement);
-        },
-      });
+			.install-size {
+				margin-top: 0.85rem;
+				font-family: var(--font-mono);
+				font-size: 0.72rem;
+				letter-spacing: 0.06em;
+				color: var(--text-dim);
+			}
 
-      // Debug - log initial state
-      console.log("Elements found:", trigger.getElements().length);
-      console.log("Initial index:", trigger.getCurrentIndex());
+			.scroll-cue {
+				margin-top: 3.5rem;
+				font-family: var(--font-mono);
+				font-size: 0.62rem;
+				letter-spacing: 0.24em;
+				text-transform: uppercase;
+				color: var(--text-dim);
+				animation: cue 2.4s ease-in-out infinite;
+			}
 
-      // Set initial state
-      setTimeout(() => {
-        const currentIndex = trigger.getCurrentIndex();
-        if (currentIndex >= 0) {
-          updateNavigation(currentIndex);
-          updateDebugPanel(currentIndex, trigger.getCurrentElement());
-        }
-      }, 100);
+			@keyframes cue {
+				0%,
+				100% {
+					opacity: 0.4;
+					transform: translateY(0);
+				}
+				50% {
+					opacity: 1;
+					transform: translateY(4px);
+				}
+			}
 
-      // Update navigation active state and scroll position
-      function updateNavigation(index) {
-        navItems.forEach((item, i) => {
-          if (i === index) {
-            item.classList.add("active");
-            item.setAttribute("aria-current", "location");
+			/* ---- Chapters ---- */
 
-            // Scroll nav item into view
-            item.scrollIntoView({
-              behavior: "smooth",
-              block: "nearest",
-              inline: "center",
-            });
-          } else {
-            item.classList.remove("active");
-            item.removeAttribute("aria-current");
-          }
-        });
-      }
+			.screen {
+				position: relative;
+				min-height: 90vh;
+				padding: 5rem 0;
+				border-top: 1px solid var(--border);
+			}
 
-      // Update debug panel
-      function updateDebugPanel(index, element) {
-        debugIndex.textContent = index;
-        if (element) {
-          // Get the parent section's data-section attribute
-          const section = element.closest(".section");
-          debugSection.textContent =
-            section?.dataset.section || element.textContent.trim();
-        } else {
-          debugSection.textContent = "none";
-        }
-      }
+			/* the rail dot lights while the chapter owns the trigger line */
+			.screen::before {
+				content: '';
+				position: absolute;
+				top: 5.4rem;
+				left: -1.5rem;
+				width: 7px;
+				height: 7px;
+				border-radius: 50%;
+				background: var(--border-accent);
+				transition:
+					background-color 0.3s ease,
+					box-shadow 0.3s ease;
+			}
 
-      // Track scroll position
-      window.addEventListener(
-        "scroll",
-        () => {
-          const scroll = Math.round(
-            window.pageYOffset || document.documentElement.scrollTop,
-          );
-          debugScroll.textContent = `${scroll}px`;
-        },
-        { passive: true },
-      );
+			.screen[data-active]::before {
+				background: var(--accent);
+				box-shadow: 0 0 0 4px var(--accent-glow);
+			}
 
-      // Handle nav item clicks
-      navItems.forEach((item, index) => {
-        item.addEventListener("click", (e) => {
-          e.preventDefault();
-          trigger.scrollToIndex(index);
+			@media (max-width: 900px) {
+				.screen::before {
+					display: none;
+				}
+			}
 
-          // Update URL without jumping
-          const href = item.getAttribute("href");
-          if (href) {
-            history.pushState(null, "", href);
-          }
-        });
-      });
+			.eyebrow {
+				display: block;
+				font-family: var(--font-mono);
+				font-size: 0.62rem;
+				letter-spacing: 0.22em;
+				text-transform: uppercase;
+				color: var(--accent);
+				margin-bottom: 0.9rem;
+			}
 
-      // Second ScrollTrigger for scroll animations
-      const scrollAnimation = new ScrollTrigger({
-        sections: "[data-animate-fade-up]",
-        offset: "10%",
-        threshold: 0.1,
-        onIndexChange: ({ currentElement }) => {
-          // Only animate once - check if already loaded
-          if (currentElement && !currentElement.hasAttribute("data-animate-loaded")) {
-            currentElement.setAttribute("data-animate-loaded", "");
-          }
-        },
-      });
+			.screen h2 {
+				font-family: var(--font-display);
+				font-weight: 300;
+				font-size: clamp(1.9rem, 4vw, 2.6rem);
+				line-height: 1.15;
+				color: var(--cream);
+				letter-spacing: -0.015em;
+				margin-bottom: 1.25rem;
+			}
 
-      // Global access for debugging
-      window.trigger = trigger;
-      window.scrollAnimation = scrollAnimation;
+			.screen h2 em {
+				font-style: italic;
+				color: var(--accent);
+			}
 
-      console.log("ScrollTrigger initialized!");
-      console.log("Scroll animations initialized!");
-      console.log("Try: trigger.scrollToIndex(3) or trigger.getCurrentIndex()");
-    </script>
-  </body>
+			.screen p {
+				max-width: 42rem;
+				line-height: 1.8;
+				margin-bottom: 1rem;
+				text-wrap: pretty;
+			}
+
+			.screen p code,
+			.features code {
+				font-family: var(--font-mono);
+				font-size: 0.8rem;
+				color: var(--accent);
+			}
+
+			/* ---- Code blocks ---- */
+
+			.code-block {
+				overflow-x: auto;
+				margin-top: 2rem;
+				background: var(--bg-card);
+				border: 1px solid var(--border);
+				border-radius: 14px;
+			}
+
+			.code-block pre {
+				margin: 0;
+				padding: 1.35rem 1.4rem;
+			}
+
+			.code-block code {
+				font-family: var(--font-mono);
+				font-size: 0.78rem;
+				line-height: 1.75;
+				color: var(--text);
+				white-space: pre;
+			}
+
+			.code-block .kw {
+				color: var(--accent);
+			}
+
+			.code-block .str {
+				color: var(--cream);
+			}
+
+			.code-block .cm {
+				color: #9fb0c4;
+			}
+
+			/* ---- Feature list ---- */
+
+			.features {
+				display: grid;
+				grid-template-columns: repeat(auto-fit, minmax(19rem, 1fr));
+				gap: 0.6rem 2rem;
+				margin-top: 2rem;
+				list-style: none;
+			}
+
+			.features li {
+				display: flex;
+				align-items: baseline;
+				gap: 0.7rem;
+				font-size: 0.95rem;
+				line-height: 1.6;
+			}
+
+			.features li::before {
+				content: '↳';
+				flex: none;
+				color: var(--accent);
+				font-size: 0.8rem;
+			}
+
+			/* ---- Offset scale ---- */
+
+			.scale {
+				display: grid;
+				grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr));
+				gap: 0.6rem;
+				margin-top: 2rem;
+				list-style: none;
+			}
+
+			.scale li {
+				padding: 0.9rem 1rem;
+				background: var(--bg-card);
+				border: 1px solid var(--border);
+				border-radius: 10px;
+				font-size: 0.85rem;
+				line-height: 1.5;
+				color: var(--text-dim);
+			}
+
+			.scale b {
+				display: block;
+				font-family: var(--font-mono);
+				font-weight: 400;
+				font-size: 0.78rem;
+				color: var(--accent);
+				margin-bottom: 0.3rem;
+			}
+
+			.scale button {
+				margin-top: 0.6rem;
+			}
+
+			/* ---- Reveal grid ---- */
+
+			.reveal-grid {
+				display: grid;
+				grid-template-columns: repeat(auto-fit, minmax(13rem, 1fr));
+				gap: 1rem;
+				margin-top: 2.5rem;
+			}
+
+			.tile {
+				display: flex;
+				flex-direction: column;
+				justify-content: flex-end;
+				gap: 0.4rem;
+				min-height: 12rem;
+				padding: 1.1rem;
+				border: 1px solid var(--border-accent);
+				border-radius: 14px;
+				background:
+					radial-gradient(130% 100% at 20% 0%, rgba(255, 122, 92, 0.22), transparent 62%),
+					var(--bg-card);
+			}
+
+			.tile:nth-child(even) {
+				background:
+					radial-gradient(130% 100% at 80% 100%, rgba(255, 122, 92, 0.16), transparent 62%),
+					var(--bg-raise);
+			}
+
+			.tile b {
+				font-family: var(--font-mono);
+				font-weight: 400;
+				font-size: 0.72rem;
+				letter-spacing: 0.12em;
+				text-transform: uppercase;
+				color: var(--accent);
+			}
+
+			.tile span {
+				font-size: 0.82rem;
+				line-height: 1.6;
+				color: var(--text-dim);
+			}
+
+			[data-animate-fade-up] {
+				opacity: 0;
+				transform: translateY(30px);
+				transition:
+					opacity 0.7s ease,
+					transform 0.7s cubic-bezier(0.22, 1, 0.36, 1);
+			}
+
+			[data-animate-fade-up][data-animate-loaded] {
+				opacity: 1;
+				transform: none;
+			}
+
+			@media (prefers-reduced-motion: reduce) {
+				[data-animate-fade-up] {
+					opacity: 1;
+					transform: none;
+					transition: none;
+				}
+			}
+
+			/* ---- API tables ---- */
+
+			.api h3 {
+				font-family: var(--font-mono);
+				font-weight: 400;
+				font-size: 0.65rem;
+				letter-spacing: 0.18em;
+				text-transform: uppercase;
+				color: var(--accent);
+				margin: 2.5rem 0 0.75rem;
+			}
+
+			.api-scroll {
+				overflow-x: auto;
+				background: var(--bg-card);
+				border: 1px solid var(--border);
+				border-radius: 14px;
+			}
+
+			.api-table {
+				width: 100%;
+				min-width: 40rem;
+				border-collapse: collapse;
+				text-align: left;
+			}
+
+			.api-table th {
+				padding: 0.8rem 1.2rem;
+				font-family: var(--font-mono);
+				font-weight: 400;
+				font-size: 0.62rem;
+				letter-spacing: 0.16em;
+				text-transform: uppercase;
+				color: var(--accent);
+				border-bottom: 1px solid var(--border);
+			}
+
+			.api-table td {
+				padding: 0.75rem 1.2rem;
+				font-size: 0.85rem;
+				line-height: 1.6;
+				vertical-align: top;
+				border-bottom: 1px solid var(--border);
+			}
+
+			.api-table tr:last-child td {
+				border-bottom: 0;
+			}
+
+			.api-table td:first-child,
+			.api-table td:nth-child(2) {
+				white-space: nowrap;
+			}
+
+			.api-table code {
+				font-family: var(--font-mono);
+				font-size: 0.76rem;
+				color: var(--accent);
+				white-space: nowrap;
+			}
+
+			/* ---- Buttons ---- */
+
+			button {
+				font-family: var(--font-body);
+				font-weight: 400;
+				font-size: 0.72rem;
+				letter-spacing: 0.08em;
+				color: var(--text);
+				background: var(--bg-raise);
+				border: 1px solid var(--border-accent);
+				border-radius: 7px;
+				padding: 0.45em 0.85em;
+				cursor: pointer;
+				transition:
+					border-color 0.2s ease,
+					color 0.2s ease;
+			}
+
+			button:hover {
+				border-color: var(--accent-mid);
+				color: var(--accent);
+			}
+
+			/* ---- Controls ---- */
+
+			.controls {
+				position: fixed;
+				right: 1rem;
+				bottom: 1rem;
+				z-index: 500;
+				width: 17.5rem;
+				max-height: calc(100svh - 2rem);
+				display: flex;
+				flex-direction: column;
+				background: rgba(13, 18, 24, 0.94);
+				backdrop-filter: blur(12px);
+				border: 1px solid var(--border-accent);
+				border-radius: 12px;
+				font-size: 0.72rem;
+			}
+
+			.controls-head {
+				display: flex;
+				align-items: center;
+				justify-content: space-between;
+				gap: 1rem;
+				padding: 0.7rem 0.9rem;
+				border-bottom: 1px solid var(--border);
+				font-family: var(--font-mono);
+				font-size: 0.62rem;
+				letter-spacing: 0.18em;
+				text-transform: uppercase;
+				color: var(--accent);
+			}
+
+			.controls-body {
+				overflow-y: auto;
+				padding: 0.9rem;
+				display: flex;
+				flex-direction: column;
+				gap: 0.9rem;
+			}
+
+			.controls[collapsed] {
+				width: auto;
+			}
+
+			.controls[collapsed] .controls-body {
+				display: none;
+			}
+
+			.controls[collapsed] .controls-head {
+				padding: 0.4rem;
+				border-bottom: 0;
+			}
+
+			.controls[collapsed] .controls-title {
+				display: none;
+			}
+
+			.field {
+				display: flex;
+				flex-direction: column;
+				gap: 0.35rem;
+			}
+
+			.field > label {
+				display: flex;
+				justify-content: space-between;
+				gap: 0.75rem;
+				font-size: 0.62rem;
+				letter-spacing: 0.16em;
+				text-transform: uppercase;
+				color: var(--text-dim);
+			}
+
+			.field-value {
+				font-family: var(--font-mono);
+				letter-spacing: 0;
+				text-transform: none;
+				color: var(--accent);
+			}
+
+			input[type='range'] {
+				width: 100%;
+				accent-color: var(--accent);
+			}
+
+			.checkline {
+				display: flex;
+				align-items: center;
+				gap: 0.45rem;
+				color: var(--text-dim);
+				cursor: pointer;
+			}
+
+			.checkline input {
+				accent-color: var(--accent);
+			}
+
+			.divider {
+				height: 1px;
+				background: var(--border);
+			}
+
+			.readout {
+				display: grid;
+				grid-template-columns: auto 1fr;
+				gap: 0.3rem 0.75rem;
+				font-family: var(--font-mono);
+				font-size: 0.68rem;
+			}
+
+			.readout dt {
+				color: var(--text-dim);
+			}
+
+			.readout dd {
+				color: var(--cream);
+				text-align: right;
+				overflow: hidden;
+				text-overflow: ellipsis;
+			}
+
+			.buttons {
+				display: flex;
+				flex-wrap: wrap;
+				gap: 0.35rem;
+			}
+
+			@media (max-width: 640px) {
+				.controls {
+					display: none;
+				}
+			}
+
+			/* ---- Footer ---- */
+
+			.foot {
+				max-width: none;
+				margin-top: 4rem;
+				border-top: 1px solid var(--border);
+				padding: 2.5rem 0 0;
+				font-size: 0.8rem;
+				color: var(--text-dim);
+			}
+
+			.foot a {
+				color: var(--accent);
+				text-decoration: none;
+			}
+		</style>
+	</head>
+
+	<body>
+		<!-- The measured line, drawn. `bottom` because the offset is measured up
+		     from the bottom of the viewport. -->
+		<div class="trigger-line" id="trigger-line"><span id="trigger-label">offset 85%</span></div>
+
+		<header class="topbar">
+			<a class="brand" href="#">Scroll<em>Trigger</em></a>
+			<nav class="chapters" id="chapters" aria-label="Chapters">
+				<button class="chapter" type="button" data-index="0">Overview</button>
+				<button class="chapter" type="button" data-index="1">Trigger line</button>
+				<button class="chapter" type="button" data-index="2">Reveal</button>
+				<button class="chapter" type="button" data-index="3">API</button>
+				<button class="chapter" type="button" data-index="4">Events</button>
+			</nav>
+		</header>
+
+		<main>
+			<section class="hero">
+				<a
+					class="hero-badge"
+					href="https://github.com/magic-spells/scroll-trigger"
+					target="_blank"
+					rel="noopener"
+					>@magic-spells/scroll-trigger</a
+				>
+				<h1>
+					<split-text trigger="load" split="chars" stagger="34" duration="880">Know where</split-text
+					><br />
+					<split-text trigger="load" split="chars" stagger="34" duration="880" delay="260"
+						>you <em>are</em>.</split-text
+					>
+				</h1>
+				<p class="hero-tagline">
+					<split-text
+						trigger="load"
+						split="words"
+						stagger="42"
+						duration="820"
+						delay="900"
+						effect="bloom">
+						One line across the viewport. The tracker tells you which section has crossed it — and
+						nothing else.
+					</split-text>
+				</p>
+				<code class="install">npm install @magic-spells/scroll-trigger</code>
+				<p class="install-size">1.5 kB JS gzip · 0.1 kB CSS gzip · 0 dependencies</p>
+				<div class="scroll-cue">scroll</div>
+			</section>
+
+			<!-- ======== 0 ======== -->
+			<section class="screen" id="overview">
+				<span class="eyebrow">01 — Overview</span>
+				<h2>A line, and what has <em>crossed</em> it</h2>
+				<p>
+					The chapter pills above are driven by the tracker on this page. An IntersectionObserver
+					watches every section against a single horizontal line; the last section whose top has
+					passed it is the active one. No scroll maths in your code, no listener to throttle.
+				</p>
+				<p>
+					Scroll slowly and watch the dashed line — the pill flips the instant a heading crosses it.
+					The panel in the corner moves that line live.
+				</p>
+
+				<div class="code-block">
+					<pre><code><span class="cm">// npm</span>
+<span class="kw">import</span> ScrollTrigger <span class="kw">from</span> <span class="str">'@magic-spells/scroll-trigger'</span>
+
+<span class="kw">const</span> trigger = <span class="kw">new</span> ScrollTrigger({
+  sections: <span class="str">'.screen'</span>,
+  offset: <span class="str">'85%'</span>,      <span class="cm">// measured up from the bottom of the viewport</span>
+  throttle: <span class="str">40</span>,
+  behavior: <span class="str">'smooth'</span>,
+  onIndexChange({ currentIndex, currentElement }) {
+    pills.forEach((p, i) =&gt; p.toggleAttribute(<span class="str">'data-active'</span>, i === currentIndex))
+  },
+})
+
+<span class="cm">// jump to one</span>
+trigger.scrollToIndex(<span class="str">2</span>)</code></pre>
+				</div>
+
+				<ul class="features">
+					<li>IntersectionObserver, not a scroll listener</li>
+					<li>Offset in pixels or in <code>%</code> of the viewport</li>
+					<li>Per-element override via <code>data-animate-offset</code></li>
+					<li>Percentages re-measure on resize, through ResizeObserver</li>
+					<li>Callback and <code>scroll-trigger:change</code> event, both</li>
+					<li><code>scrollToIndex()</code> lands on the same line it measures</li>
+					<li>Throttled updates, tunable per instance</li>
+					<li>Plain ES class — no custom element, no framework</li>
+					<li><code>refresh()</code> after DOM changes, <code>destroy()</code> on teardown</li>
+					<li>Zero dependencies, 1.5 kB gzipped</li>
+				</ul>
+			</section>
+
+			<!-- ======== 1 ======== -->
+			<section class="screen" id="offsets">
+				<span class="eyebrow">02 — Trigger line</span>
+				<h2>The offset is measured from the <em>bottom</em></h2>
+				<p>
+					<code>offset</code> is the distance from the bottom of the viewport up to the line. A
+					number is pixels; a string ending in <code>%</code> is a share of the viewport height, and
+					re-measures whenever the viewport changes size.
+				</p>
+				<p>
+					Small values put the line near the bottom, which suits reveal animations — an element
+					fires as it enters the screen. Large values put it near the top, which suits navigation —
+					a section owns the nav once its heading reaches reading position.
+				</p>
+
+				<ul class="scale">
+					<li>
+						<b>offset: 0</b>
+						Bottom edge. Fires the moment an element appears.
+						<button type="button" data-offset="4">try</button>
+					</li>
+					<li>
+						<b>offset: '25%'</b>
+						A quarter up. The usual choice for fade-ups.
+						<button type="button" data-offset="25">try</button>
+					</li>
+					<li>
+						<b>offset: '50%'</b>
+						Dead centre.
+						<button type="button" data-offset="50">try</button>
+					</li>
+					<li>
+						<b>offset: '85%'</b>
+						Near the top — reading position, for navigation.
+						<button type="button" data-offset="85">try</button>
+					</li>
+				</ul>
+
+				<div class="code-block">
+					<pre><code><span class="cm">// pixels from the bottom</span>
+<span class="kw">new</span> ScrollTrigger({ sections: <span class="str">'.section'</span>, offset: <span class="str">100</span> })
+
+<span class="cm">// share of the viewport, responsive</span>
+<span class="kw">new</span> ScrollTrigger({ sections: <span class="str">'.section'</span>, offset: <span class="str">'85%'</span> })
+
+<span class="cm">// change it at runtime — observers are rebuilt for you</span>
+trigger.updateConfig({ offset: <span class="str">'50%'</span> })</code></pre>
+				</div>
+			</section>
+
+			<!-- ======== 2 ======== -->
+			<section class="screen" id="reveal">
+				<span class="eyebrow">03 — Reveal</span>
+				<h2>Every element can move its <em>own</em> line</h2>
+				<p>
+					<code>data-animate-offset</code> overrides the instance offset for one element. Same
+					tracker, same observer — four different trigger heights. Each tile below names the offset
+					it fires at, so a higher percentage waits longer before it arrives.
+				</p>
+
+				<div class="reveal-grid">
+					<div class="tile" data-animate-fade-up data-animate-offset="8%">
+						<b>8%</b>
+						<span>Fires almost at the bottom edge, as soon as the tile is on screen.</span>
+					</div>
+					<div class="tile" data-animate-fade-up data-animate-offset="18%">
+						<b>18%</b>
+						<span>A little higher. The stagger comes from geometry, not a timer.</span>
+					</div>
+					<div class="tile" data-animate-fade-up data-animate-offset="28%">
+						<b>28%</b>
+						<span>Higher still — this one waits until the row is well into view.</span>
+					</div>
+					<div class="tile" data-animate-fade-up data-animate-offset="120">
+						<b>120px</b>
+						<span>Pixels work too. Mix units freely across one instance.</span>
+					</div>
+				</div>
+
+				<div class="code-block">
+					<pre><code>&lt;<span class="kw">div</span> data-animate-fade-up&gt;                        <span class="cm">// uses the instance offset</span>
+&lt;<span class="kw">div</span> data-animate-fade-up <span class="kw">data-animate-offset</span>=<span class="str">"18%"</span>&gt;  <span class="cm">// 18% up from the bottom</span>
+&lt;<span class="kw">div</span> data-animate-fade-up <span class="kw">data-animate-offset</span>=<span class="str">"120"</span>&gt;  <span class="cm">// 120px up from the bottom</span>
+
+<span class="kw">const</span> tiles = [...document.querySelectorAll(<span class="str">'[data-animate-fade-up]'</span>)]
+
+<span class="kw">new</span> ScrollTrigger({
+  sections: tiles,
+  offset: <span class="str">'12%'</span>,
+  onIndexChange({ currentIndex }) {
+    <span class="cm">// everything up to the active index has crossed its own line</span>
+    tiles.forEach((el, i) =&gt; {
+      <span class="kw">if</span> (i &lt;= currentIndex) el.setAttribute(<span class="str">'data-animate-loaded'</span>, <span class="str">''</span>)
+    })
+  },
+})</code></pre>
+				</div>
+			</section>
+
+			<!-- ======== 3 ======== -->
+			<section class="screen api" id="api">
+				<span class="eyebrow">04 — API</span>
+				<h2>Six options, seven <em>methods</em></h2>
+
+				<h3>Options</h3>
+				<div class="api-scroll">
+					<table class="api-table">
+						<thead>
+							<tr>
+								<th scope="col">Option</th>
+								<th scope="col">Default</th>
+								<th scope="col">Description</th>
+							</tr>
+						</thead>
+						<tbody>
+							<tr>
+								<td><code>sections</code></td>
+								<td><code>null</code></td>
+								<td>Selector string, NodeList or array of elements to track. Required</td>
+							</tr>
+							<tr>
+								<td><code>offset</code></td>
+								<td><code>100</code></td>
+								<td>
+									Distance from the bottom of the viewport to the trigger line. Number for pixels,
+									string for a percentage of viewport height
+								</td>
+							</tr>
+							<tr>
+								<td><code>threshold</code></td>
+								<td><code>0.1</code></td>
+								<td>IntersectionObserver threshold. Use <code>0</code> for maximum sensitivity</td>
+							</tr>
+							<tr>
+								<td><code>throttle</code></td>
+								<td><code>100</code></td>
+								<td>Milliseconds between index recalculations</td>
+							</tr>
+							<tr>
+								<td><code>behavior</code></td>
+								<td><code>'smooth'</code></td>
+								<td>Scroll behaviour for <code>scrollToIndex()</code>. Overridable per call</td>
+							</tr>
+							<tr>
+								<td><code>onIndexChange</code></td>
+								<td><code>null</code></td>
+								<td>
+									Called with
+									<code
+										>{ currentIndex, previousIndex, currentElement, previousElement }</code
+									>
+									whenever the active element changes
+								</td>
+							</tr>
+						</tbody>
+					</table>
+				</div>
+
+				<h3>Methods</h3>
+				<div class="api-scroll">
+					<table class="api-table">
+						<thead>
+							<tr>
+								<th scope="col">Method</th>
+								<th scope="col">Returns</th>
+								<th scope="col">Description</th>
+							</tr>
+						</thead>
+						<tbody>
+							<tr>
+								<td><code>getCurrentIndex()</code></td>
+								<td><code>number</code></td>
+								<td>Active index, or <code>-1</code> when nothing has crossed the line</td>
+							</tr>
+							<tr>
+								<td><code>getCurrentElement()</code></td>
+								<td><code>Element|null</code></td>
+								<td>The active element</td>
+							</tr>
+							<tr>
+								<td><code>getElements()</code></td>
+								<td><code>Element[]</code></td>
+								<td>A copy of the tracked list</td>
+							</tr>
+							<tr>
+								<td><code>scrollToIndex(i, opts)</code></td>
+								<td><code>void</code></td>
+								<td>
+									Scrolls until that element's top sits on its own trigger line. Accepts
+									<code>{ behavior, offset }</code>
+								</td>
+							</tr>
+							<tr>
+								<td><code>scrollToElement(el, opts)</code></td>
+								<td><code>void</code></td>
+								<td>Same, addressed by element</td>
+							</tr>
+							<tr>
+								<td><code>refresh()</code></td>
+								<td><code>void</code></td>
+								<td>Re-reads the DOM. Call after adding or removing tracked elements</td>
+							</tr>
+							<tr>
+								<td><code>updateConfig(cfg)</code></td>
+								<td><code>void</code></td>
+								<td>Merges new options, rebuilding observers when the geometry changes</td>
+							</tr>
+							<tr>
+								<td><code>destroy()</code></td>
+								<td><code>void</code></td>
+								<td>Disconnects every observer, listener and timer</td>
+							</tr>
+						</tbody>
+					</table>
+				</div>
+			</section>
+
+			<!-- ======== 4 ======== -->
+			<section class="screen" id="events">
+				<span class="eyebrow">05 — Events</span>
+				<h2>Or skip the callback <em>entirely</em></h2>
+				<p>
+					Every change also fires <code>scroll-trigger:change</code> on <code>window</code>, so
+					unrelated parts of a page can react without a reference to the instance. The readout in
+					the corner is wired this way.
+				</p>
+
+				<div class="api-scroll">
+					<table class="api-table">
+						<thead>
+							<tr>
+								<th scope="col">Detail</th>
+								<th scope="col">Type</th>
+								<th scope="col">Description</th>
+							</tr>
+						</thead>
+						<tbody>
+							<tr>
+								<td><code>index</code></td>
+								<td><code>number</code></td>
+								<td>New active index, <code>-1</code> for none</td>
+							</tr>
+							<tr>
+								<td><code>previousIndex</code></td>
+								<td><code>number</code></td>
+								<td>Index before the change</td>
+							</tr>
+							<tr>
+								<td><code>section</code></td>
+								<td><code>Element|null</code></td>
+								<td>New active element</td>
+							</tr>
+							<tr>
+								<td><code>previousSection</code></td>
+								<td><code>Element|null</code></td>
+								<td>Element before the change</td>
+							</tr>
+						</tbody>
+					</table>
+				</div>
+
+				<div class="code-block">
+					<pre><code>window.addEventListener(<span class="str">'scroll-trigger:change'</span>, (e) =&gt; {
+  <span class="kw">const</span> { index, previousIndex, section } = e.detail
+  <span class="kw">if</span> (section) document.title = <span class="str">`${section.id} — Docs`</span>
+})</code></pre>
+				</div>
+
+				<p class="foot">
+					<a href="https://github.com/magic-spells/scroll-trigger">GitHub</a> ·
+					<a href="https://www.npmjs.com/package/@magic-spells/scroll-trigger">npm</a> · MIT
+				</p>
+			</section>
+		</main>
+
+		<aside class="controls" id="controls">
+			<div class="controls-head">
+				<span class="controls-title">Live config</span>
+				<button type="button" data-action="collapse">hide</button>
+			</div>
+			<div class="controls-body">
+				<div class="field">
+					<label for="offset">offset <span class="field-value" id="offset-value">85%</span></label>
+					<input type="range" id="offset" min="0" max="100" step="1" value="85" />
+				</div>
+
+				<div class="field">
+					<label for="throttle"
+						>throttle <span class="field-value" id="throttle-value">40ms</span></label
+					>
+					<input type="range" id="throttle" min="0" max="400" step="10" value="40" />
+				</div>
+
+				<label class="checkline">
+					<input type="checkbox" id="show-line" checked />
+					show trigger line
+				</label>
+
+				<div class="divider"></div>
+
+				<dl class="readout">
+					<dt>index</dt>
+					<dd id="out-index">-1</dd>
+					<dt>element</dt>
+					<dd id="out-element">—</dd>
+					<dt>previous</dt>
+					<dd id="out-previous">—</dd>
+					<dt>changes</dt>
+					<dd id="out-count">0</dd>
+				</dl>
+
+				<div class="buttons">
+					<button type="button" data-action="first">first</button>
+					<button type="button" data-action="last">last</button>
+					<button type="button" data-action="top">top</button>
+				</div>
+			</div>
+		</aside>
+
+		<script type="module">
+			import ScrollTrigger from './scroll-trigger.esm.js';
+
+			const pills = [...document.querySelectorAll('.chapter')];
+			const screens = [...document.querySelectorAll('main .screen')];
+			const chapters = document.getElementById('chapters');
+			const line = document.getElementById('trigger-line');
+			const lineLabel = document.getElementById('trigger-label');
+
+			// ---- chapter tracker: the nav on this page ----
+
+			const trigger = new ScrollTrigger({
+				sections: screens,
+				offset: '85%',
+				threshold: 0,
+				throttle: 40,
+				behavior: 'smooth',
+				onIndexChange: ({ currentIndex }) => {
+					pills.forEach((pill, i) => pill.toggleAttribute('data-active', i === currentIndex));
+					screens.forEach((el, i) => el.toggleAttribute('data-active', i === currentIndex));
+
+					// keep the active pill inside the scrollable strip. Scrolling the strip
+					// directly rather than scrollIntoView(): that walks every ancestor
+					// scroller, and would cancel the page's own smooth scroll mid-flight
+					const active = pills[currentIndex];
+					if (active) {
+						const left = active.offsetLeft - (chapters.clientWidth - active.offsetWidth) / 2;
+						chapters.scrollTo({ left, behavior: 'smooth' });
+					}
+				},
+			});
+
+			pills.forEach((pill) => {
+				// -16 clears the trigger line by a few pixels: landing exactly on it is a
+				// tie the tracker resolves in favour of the section above
+				pill.addEventListener('click', () =>
+					trigger.scrollToIndex(Number(pill.dataset.index), { offset: -16 })
+				);
+			});
+
+			// ---- reveal tracker: per-element offsets ----
+
+			const tiles = [...document.querySelectorAll('[data-animate-fade-up]')];
+
+			new ScrollTrigger({
+				sections: tiles,
+				offset: '12%',
+				threshold: 0,
+				throttle: 30,
+				onIndexChange: ({ currentIndex }) => {
+					// everything up to the active index has crossed its own line
+					tiles.forEach((el, i) => {
+						if (i <= currentIndex) el.setAttribute('data-animate-loaded', '');
+					});
+				},
+			});
+
+			// ---- the drawn line ----
+
+			function drawLine(percent) {
+				line.style.setProperty('--line-offset', `${percent}%`);
+				lineLabel.textContent = `offset ${percent}%`;
+			}
+			drawLine(85);
+
+			// ---- controls ----
+
+			const offsetInput = document.getElementById('offset');
+			const offsetValue = document.getElementById('offset-value');
+			const throttleInput = document.getElementById('throttle');
+			const throttleValue = document.getElementById('throttle-value');
+
+			function setOffset(percent) {
+				offsetInput.value = percent;
+				offsetValue.textContent = `${percent}%`;
+				drawLine(percent);
+				trigger.updateConfig({ offset: `${percent}%` });
+			}
+
+			offsetInput.addEventListener('input', () => setOffset(Number(offsetInput.value)));
+
+			throttleInput.addEventListener('input', () => {
+				const ms = Number(throttleInput.value);
+				throttleValue.textContent = `${ms}ms`;
+				trigger.updateConfig({ throttle: ms });
+			});
+
+			document.getElementById('show-line').addEventListener('change', (e) => {
+				line.hidden = !e.target.checked;
+			});
+
+			document.addEventListener('click', (e) => {
+				const preset = e.target.closest('[data-offset]');
+				if (preset) {
+					setOffset(Number(preset.dataset.offset));
+					return;
+				}
+
+				const action = e.target.closest('[data-action]')?.dataset.action;
+				if (action === 'collapse') {
+					const collapsed = document.getElementById('controls').toggleAttribute('collapsed');
+					e.target.textContent = collapsed ? 'config' : 'hide';
+				} else if (action === 'first') {
+					trigger.scrollToIndex(0);
+				} else if (action === 'last') {
+					trigger.scrollToIndex(trigger.getElements().length - 1);
+				} else if (action === 'top') {
+					window.scrollTo({ top: 0, behavior: 'smooth' });
+				}
+			});
+
+			// ---- readout, driven by the event rather than the callback ----
+
+			const outIndex = document.getElementById('out-index');
+			const outElement = document.getElementById('out-element');
+			const outPrevious = document.getElementById('out-previous');
+			const outCount = document.getElementById('out-count');
+			let changes = 0;
+
+			window.addEventListener('scroll-trigger:change', (e) => {
+				const { index, section, previousSection } = e.detail;
+
+				// both trackers emit on window, so ignore the reveal instance's changes
+				if (!screens.includes(section) && !screens.includes(previousSection)) return;
+
+				outIndex.textContent = index;
+				outElement.textContent = section?.id ?? '—';
+				outPrevious.textContent = previousSection?.id ?? '—';
+				outCount.textContent = ++changes;
+			});
+		</script>
+	</body>
 </html>
